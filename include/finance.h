@@ -24,6 +24,8 @@ typedef struct {
     long double total_paid;
 } LoanSchedule;
 
-void calculate_and_print_schedule( double principal,  long double annual_rate,  int months, LoanType type);
+void calculate_and_print_schedule(long double principal,  long double annual_rate,  int months, LoanType type);
+
+void calculate_and_print_dynamic_schedule(long double principal,  long double annual_rate,  int months, LoanType type, const long double *custom_payments);
 
 #endif //STATISTICALDATAPROCESSOR_FINANCE_H

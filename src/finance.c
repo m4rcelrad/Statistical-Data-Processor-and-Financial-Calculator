@@ -15,7 +15,40 @@ static int is_zero(const long double value) {
     return  fabsl(value) < EPS;
 }
 
-LoanSchedule calculate_schedule(const long double principal, const long double annual_rate, const int months, const LoanType type) {
+static void print_schedule(const LoanSchedule *schedule) {
+    printf("\nLoan Schedule:\n");
+    printf("-------------------------------------------------------------------\n");
+    printf("| %3s | %12s | %12s | %12s | %12s |\n", "No.", "Principal", "Interest", "Payment", "Balance");
+    printf("-------------------------------------------------------------------\n");
+
+    for (int i = 0; i < schedule->count; i++) {
+        printf("| %3d | %12.2Lf | %12.2Lf | %12.2Lf | %12.2Lf |\n",
+               i + 1,
+               schedule->items[i].capital,
+               schedule->items[i].interest,
+               schedule->items[i].payment,
+               schedule->items[i].balance);
+    }
+
+    printf("-------------------------------------------------------------------\n");
+    printf("SUMMARY:\n");
+    printf("Total Principal Paid: %12.2Lf\n", schedule->total_paid - schedule->total_interest);
+    printf("Total Interest Cost:  %12.2Lf\n", schedule->total_interest);
+    printf("Total Amount Paid:    %12.2Lf\n", schedule->total_paid);
+    printf("-------------------------------------------------------------------\n");
+}
+
+static void free_schedule(LoanSchedule *schedule) {
+    if (schedule->items) {
+        free(schedule->items);
+        schedule->items = NULL;
+    }
+    schedule->count = 0;
+    schedule->total_interest = 0.0L;
+    schedule->total_paid = 0.0L;
+}
+
+static LoanSchedule calculate_schedule(const long double principal, const long double annual_rate, const int months, const LoanType type) {
 
     LoanSchedule schedule = {0};
 
@@ -37,7 +70,7 @@ LoanSchedule calculate_schedule(const long double principal, const long double a
 
     if (type == LOAN_EQUAL_INSTALLMENTS && !is_zero_interest_flag) {
         const long double factor = powl(1.0L + monthly_rate, months);
-        if (factor - 1.0L > EPS) {
+        if (!is_zero(factor - 1.0L)) {
             fixed_installment = principal * monthly_rate * factor / (factor - 1.0L);
             fixed_installment = round2(fixed_installment);
         }
@@ -87,45 +120,100 @@ LoanSchedule calculate_schedule(const long double principal, const long double a
     return schedule;
 }
 
-void print_schedule(const LoanSchedule *schedule) {
-    printf("\nLoan Schedule:\n");
-    printf("-------------------------------------------------------------------\n");
-    printf("| %3s | %12s | %12s | %12s | %12s |\n", "No.", "Principal", "Interest", "Payment", "Balance");
-    printf("-------------------------------------------------------------------\n");
-
-    for (int i = 0; i < schedule->count; i++) {
-        printf("| %3d | %12.2Lf | %12.2Lf | %12.2Lf | %12.2Lf |\n",
-               i + 1,
-               schedule->items[i].capital,
-               schedule->items[i].interest,
-               schedule->items[i].payment,
-               schedule->items[i].balance);
-    }
-
-    printf("-------------------------------------------------------------------\n");
-    printf("SUMMARY:\n");
-    printf("Total Principal Paid: %12.2Lf\n", schedule->total_paid - schedule->total_interest);
-    printf("Total Interest Cost:  %12.2Lf\n", schedule->total_interest);
-    printf("Total Amount Paid:    %12.2Lf\n", schedule->total_paid);
-    printf("-------------------------------------------------------------------\n");
-}
-
-void free_schedule(LoanSchedule *schedule) {
-    if (schedule->items) {
-        free(schedule->items);
-        schedule->items = NULL;
-    }
-    schedule->count = 0;
-    schedule->total_interest = 0.0L;
-    schedule->total_paid = 0.0L;
-}
-
-
-void calculate_and_print_schedule(const double principal, const long double annual_rate, const int months, const LoanType type) {
+void calculate_and_print_schedule(const long double principal, const long double annual_rate, const int months, const LoanType type) {
 
     LoanSchedule schedule = calculate_schedule(principal, annual_rate, months, type);
 
     if (schedule.items) {
+        print_schedule(&schedule);
+        free_schedule(&schedule);
+    } else {
+        printf("Error: Memory allocation failed or invalid input.\n");
+    }
+}
+
+LoanSchedule calculate_dynamic_schedule(const long double principal, const long double annual_rate, const int months, const LoanType type, const long double *custom_payments) {
+    LoanSchedule schedule = {0};
+
+    if (principal <= 0.0L || months <= 0 || annual_rate < 0.0L) return schedule;
+
+    schedule.items = calloc(months, sizeof(Installment));
+    if (!schedule.items) return schedule;
+
+    schedule.count = months;
+
+    long double current_balance = round2(principal);
+    const long double monthly_rate = annual_rate / 12.0L;
+    const int is_zero_interest_flag = is_zero(monthly_rate);
+
+    long double base_fixed_installment = 0.0L;
+
+    if (type == LOAN_EQUAL_INSTALLMENTS && !is_zero_interest_flag) {
+        const long double factor = powl(1.0L + monthly_rate, months);
+        if (!is_zero(factor - 1.0L)) {
+            base_fixed_installment = principal * monthly_rate * factor / (factor - 1.0L);
+            base_fixed_installment = round2(base_fixed_installment);
+        }
+    }
+
+    for (int i = 0; i < months; i++) {
+        long double interest = 0.0L;
+        long double capital, payment;
+
+        if (!is_zero_interest_flag) interest = round2(current_balance * monthly_rate);
+
+        const long double user_custom_amount = (custom_payments != NULL) ? custom_payments[i] : 0.0;
+
+        if (user_custom_amount > EPS) {
+            payment = round2(user_custom_amount);
+
+            if (payment <= interest + EPS) payment = interest + 0.01L;
+            capital = round2(payment - interest);
+            if (capital <= 0.0L) capital = 0.01L;
+        } else {
+            if (type == LOAN_EQUAL_INSTALLMENTS && !is_zero_interest_flag) {
+                payment = base_fixed_installment;
+                capital = round2(payment - interest);
+            } else {
+                const int remaining_months = months - i;
+
+                capital = round2(current_balance/ (long double)remaining_months);
+                if (i == months - 1) capital = current_balance;
+
+            }
+        }
+
+        if (capital > current_balance) capital = current_balance;
+
+        payment = round2(capital + interest);
+        current_balance = round2(current_balance - capital);
+        if (current_balance < 0.0L) current_balance = 0.0L;
+
+        schedule.items[i].capital = capital;
+        schedule.items[i].interest = interest;
+        schedule.items[i].payment = payment;
+        schedule.items[i].balance = current_balance;
+
+        schedule.total_interest += interest;
+        schedule.total_paid += payment;
+
+        if (is_zero(current_balance)) {
+            schedule.count = i + 1;
+            break;
+        }
+    }
+
+    schedule.total_interest = round2(schedule.total_interest);
+    schedule.total_paid = round2(schedule.total_paid);
+
+    return schedule;
+}
+
+void calculate_and_print_dynamic_schedule(const long double principal, const long double annual_rate, const int months, const LoanType type, const long double *custom_payments) {
+    LoanSchedule schedule = calculate_dynamic_schedule(principal, annual_rate, months, type, custom_payments);
+
+    if (schedule.items) {
+        printf("\n=== DYNAMIC SCHEDULE ===\n");
         print_schedule(&schedule);
         free_schedule(&schedule);
     } else {
