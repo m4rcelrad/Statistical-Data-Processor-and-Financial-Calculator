@@ -55,55 +55,60 @@ static LoanSchedule calculate_schedule(const long double principal, const long d
     if (principal <= 0.0L || months <= 0 || annual_rate < 0.0L) return schedule;
 
     schedule.items = calloc(months, sizeof(Installment));
-
     if (!schedule.items) return schedule;
 
     schedule.count = months;
 
-    long double current_balance = round2(principal);
+    long double current_balance = principal;
     const long double monthly_rate = annual_rate / 12.0L;
 
     const int is_zero_interest_flag = is_zero(monthly_rate);
 
-    long double fixed_installment = 0.0L;
-    long double fixed_capital_part = 0.0L;
+    long double fixed_installment_exact = 0.0L;
+    long double fixed_capital_part_exact = 0.0L;
 
     if (type == LOAN_EQUAL_INSTALLMENTS && !is_zero_interest_flag) {
         const long double factor = powl(1.0L + monthly_rate, months);
         if (!is_zero(factor - 1.0L)) {
-            fixed_installment = principal * monthly_rate * factor / (factor - 1.0L);
-            fixed_installment = round2(fixed_installment);
+            fixed_installment_exact = principal * monthly_rate * factor / (factor - 1.0L);
         }
     } else {
-        fixed_capital_part = round2(principal / months);
+        fixed_capital_part_exact = principal / months;
     }
 
     for (int i = 0; i < months; i++) {
-        long double interest = 0.0L;
-        long double capital, payment;
+        long double interest_exact = 0.0L;
+        long double capital_exact, payment_exact;
 
-        if (!is_zero_interest_flag) interest = round2(current_balance * monthly_rate);
+        if (!is_zero_interest_flag) interest_exact = current_balance * monthly_rate;
 
         if (type == LOAN_EQUAL_INSTALLMENTS && !is_zero_interest_flag) {
-            payment = fixed_installment;
-            capital = round2(payment - interest);
+            payment_exact = fixed_installment_exact;
+            capital_exact = round2(payment_exact - interest_exact);
         } else {
-            capital = fixed_capital_part;
+            capital_exact = fixed_capital_part_exact;
 
-            if (i == months - 1) capital = current_balance;
+            if (i == months - 1) capital_exact = current_balance;
+
+            payment_exact = capital_exact + interest_exact;
         }
 
-        if (capital > current_balance) capital = current_balance;
-
-        payment = round2(capital + interest);
-
-        current_balance = round2(current_balance - capital);
+        if (capital_exact > current_balance) {
+            capital_exact = current_balance;
+            payment_exact = capital_exact + interest_exact;
+        }
+        current_balance -= capital_exact;
         if (current_balance < 0.0L) current_balance = 0.0L;
+
+        const long double interest = round2(interest_exact);
+        const long double capital = round2(capital_exact);
+        const long double payment = round2(payment_exact);
+        const long double balance = round2(current_balance);
 
         schedule.items[i].capital = capital;
         schedule.items[i].interest = interest;
         schedule.items[i].payment = payment;
-        schedule.items[i].balance = current_balance;
+        schedule.items[i].balance = balance;
 
         schedule.total_interest += interest;
         schedule.total_paid += payment;
@@ -142,8 +147,9 @@ LoanSchedule calculate_dynamic_schedule(const long double principal, const long 
 
     schedule.count = months;
 
-    long double current_balance = round2(principal);
+    long double current_balance = principal;
     const long double monthly_rate = annual_rate / 12.0L;
+
     const int is_zero_interest_flag = is_zero(monthly_rate);
 
     long double base_fixed_installment = 0.0L;
@@ -151,42 +157,48 @@ LoanSchedule calculate_dynamic_schedule(const long double principal, const long 
     if (type == LOAN_EQUAL_INSTALLMENTS && !is_zero_interest_flag) {
         const long double factor = powl(1.0L + monthly_rate, months);
         if (!is_zero(factor - 1.0L)) {
-            base_fixed_installment = principal * monthly_rate * factor / (factor - 1.0L);
-            base_fixed_installment = round2(base_fixed_installment);
+            const long double exact = principal * monthly_rate * factor / (factor - 1.0L);
+            base_fixed_installment = round2(exact);
         }
+    } else {
+        base_fixed_installment = round2(principal / months);
     }
 
     for (int i = 0; i < months; i++) {
         long double interest = 0.0L;
-        long double capital, payment;
-
         if (!is_zero_interest_flag) interest = round2(current_balance * monthly_rate);
+
+        long double payment, capital;
 
         const long double user_custom_amount = (custom_payments != NULL) ? custom_payments[i] : 0.0;
 
         if (user_custom_amount > EPS) {
             payment = round2(user_custom_amount);
 
-            if (payment <= interest + EPS) payment = interest + 0.01L;
+            if (payment <= interest)
+                payment = interest + 0.01L;
+
             capital = round2(payment - interest);
-            if (capital <= 0.0L) capital = 0.01L;
         } else {
             if (type == LOAN_EQUAL_INSTALLMENTS && !is_zero_interest_flag) {
                 payment = base_fixed_installment;
                 capital = round2(payment - interest);
             } else {
                 const int remaining_months = months - i;
+                capital = round2(current_balance / (long double)remaining_months);
 
-                capital = round2(current_balance/ (long double)remaining_months);
                 if (i == months - 1) capital = current_balance;
-
+                payment = round2(capital + interest);
             }
+
         }
 
-        if (capital > current_balance) capital = current_balance;
-
-        payment = round2(capital + interest);
+        if (capital > current_balance) {
+            capital = current_balance;
+            payment = round2(capital + interest);
+        }
         current_balance = round2(current_balance - capital);
+
         if (current_balance < 0.0L) current_balance = 0.0L;
 
         schedule.items[i].capital = capital;
@@ -220,3 +232,4 @@ void calculate_and_print_dynamic_schedule(const long double principal, const lon
         printf("Error: Memory allocation failed or invalid input.\n");
     }
 }
+
