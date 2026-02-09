@@ -10,6 +10,20 @@ typedef enum {
     LOAN_DECREASING_INSTALLMENTS
 } LoanType;
 
-void calculate_and_print_schedule(double principal, double annual_rate, int months, LoanType type);
+typedef struct {
+    long double capital;
+    long double interest;
+    long double payment;
+    long double balance;
+} Installment;
+
+typedef struct {
+    Installment *items;
+    int count;
+    long double total_interest;
+    long double total_paid;
+} LoanSchedule;
+
+void calculate_and_print_schedule( double principal,  long double annual_rate,  int months, LoanType type);
 
 #endif //STATISTICALDATAPROCESSOR_FINANCE_H
