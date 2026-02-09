@@ -8,4 +8,6 @@ file(GLOB SOURCES "src/*.c")
 
 add_executable(StatisticalDataProcessor ${SOURCES}
         include/finance.h
-        src/finance.c)
+        src/finance.c
+        include/report.h
+        src/report.c)

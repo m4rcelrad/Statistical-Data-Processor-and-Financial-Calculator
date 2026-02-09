@@ -1,7 +1,3 @@
-//
-// Created by maryc on 8.02.2026.
-//
-
 #ifndef STATISTICALDATAPROCESSOR_FINANCE_H
 #define STATISTICALDATAPROCESSOR_FINANCE_H
 
@@ -24,8 +20,10 @@ typedef struct {
     long double total_paid;
 } LoanSchedule;
 
-void calculate_and_print_schedule(long double principal,  long double annual_rate,  int months, LoanType type);
+void free_schedule(LoanSchedule *schedule);
 
-void calculate_and_print_dynamic_schedule(long double principal,  long double annual_rate,  int months, LoanType type, const long double *custom_payments);
+LoanSchedule calculate_schedule(long double principal, long double annual_rate, int months, LoanType type);
+
+LoanSchedule calculate_dynamic_schedule(long double principal, long double annual_rate, int months, LoanType type, const long double *custom_payments);
 
 #endif //STATISTICALDATAPROCESSOR_FINANCE_H
