@@ -1,29 +1,44 @@
 #ifndef STATISTICALDATAPROCESSOR_FINANCE_H
 #define STATISTICALDATAPROCESSOR_FINANCE_H
 
+#include <math.h>
+
+#define CURRENCY_SCALE 100
+
+#define TO_MINOR_UNIT(major) ((Money)llroundl((long double)(major) * CURRENCY_SCALE))
+#define TO_MAJOR_UNIT(minor) ((long double)(minor) / (long double)CURRENCY_SCALE)
+
+typedef long long Money;
+
+typedef struct {
+    long double value;
+} Rate;
+
 typedef enum {
     LOAN_EQUAL_INSTALLMENTS,
     LOAN_DECREASING_INSTALLMENTS
 } LoanType;
 
 typedef struct {
-    long double capital;
-    long double interest;
-    long double payment;
-    long double balance;
+    Money capital;
+    Money interest;
+    Money payment;
+    Money balance;
 } Installment;
 
 typedef struct {
     Installment *items;
     int count;
-    long double total_interest;
-    long double total_paid;
+    Money total_interest;
+    Money total_paid;
 } LoanSchedule;
 
 void free_schedule(LoanSchedule *schedule);
 
-LoanSchedule calculate_schedule(long double principal, long double annual_rate, int months, LoanType type);
+Rate create_rate(long double value);
 
-LoanSchedule calculate_dynamic_schedule(long double principal, long double annual_rate, int months, LoanType type, const long double *custom_payments);
+LoanSchedule calculate_schedule(Money principal, Rate annual_rate, int months, LoanType type);
+
+LoanSchedule calculate_dynamic_schedule(Money principal, Rate annual_rate, int months, LoanType type, const Money *custom_payments);
 
 #endif //STATISTICALDATAPROCESSOR_FINANCE_H
