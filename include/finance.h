@@ -19,6 +19,11 @@ typedef enum {
     LOAN_DECREASING_INSTALLMENTS
 } LoanType;
 
+typedef enum {
+    STRATEGY_REDUCE_TERM,
+    STRATEGY_REDUCE_INSTALLMENT
+} OverpaymentStrategy;
+
 typedef struct {
     Money capital;
     Money interest;
@@ -39,6 +44,6 @@ Rate create_rate(long double value);
 
 LoanSchedule calculate_schedule(Money principal, Rate annual_rate, int months, LoanType type);
 
-LoanSchedule calculate_dynamic_schedule(Money principal, Rate annual_rate, int months, LoanType type, const Money *custom_payments);
+LoanSchedule calculate_dynamic_schedule(Money principal, Rate annual_rate, int months, LoanType type, const Money *custom_payments, OverpaymentStrategy strategy);
 
 #endif //STATISTICALDATAPROCESSOR_FINANCE_H

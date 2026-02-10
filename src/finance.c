@@ -18,7 +18,7 @@ void free_schedule(LoanSchedule *schedule) {
     schedule->total_paid = 0;
 }
 
-LoanSchedule calculate_dynamic_schedule(const Money principal, const Rate annual_rate, const int months, const LoanType type, const Money *custom_payments) {
+LoanSchedule calculate_dynamic_schedule(const Money principal, const Rate annual_rate, const int months, const LoanType type, const Money *custom_payments, const OverpaymentStrategy strategy) {
     LoanSchedule schedule = {0};
 
     if (principal <= 0 || months <= 0 || annual_rate.value < 0.0L) return schedule;
@@ -34,6 +34,7 @@ LoanSchedule calculate_dynamic_schedule(const Money principal, const Rate annual
     const int zero_interest = (annual_rate.value == 0.0L);
 
     Money base_fixed_installment = 0;
+    Money base_capital_part = principal / months;
 
     if (type == LOAN_EQUAL_INSTALLMENTS && !zero_interest) {
         const long double factor = powl(1.0L + monthly_rate_factor, months);
@@ -65,8 +66,12 @@ LoanSchedule calculate_dynamic_schedule(const Money principal, const Rate annual
                 payment = base_fixed_installment;
                 capital = payment - interest;
             } else {
-                const int remaining_months = months - i;
-                capital = current_balance / remaining_months;
+                if (strategy == STRATEGY_REDUCE_INSTALLMENT) {
+                    const int remaining_months = months - i;
+                    capital = (remaining_months > 0) ? current_balance / remaining_months : current_balance;
+                } else {
+                    capital = base_capital_part;
+                }
             }
         }
 
@@ -91,6 +96,24 @@ LoanSchedule calculate_dynamic_schedule(const Money principal, const Rate annual
         schedule.total_interest += interest;
         schedule.total_paid += payment;
 
+        if (user_custom_amount > 0 && current_balance > 0) {
+            int remaining_months_future = months - (i + 1);
+
+            switch (strategy) {
+                case STRATEGY_REDUCE_INSTALLMENT:
+                    if (type == LOAN_EQUAL_INSTALLMENTS && !zero_interest && remaining_months_future > 0) {
+                        const long double factor = powl(1.0L + monthly_rate_factor, remaining_months_future);
+                        if (factor - 1.0L != 0.0L) {
+                            const long double exact = (long double)current_balance * monthly_rate_factor * factor / (factor - 1.0L);
+                            base_fixed_installment = llroundl(exact);
+                        }
+                    }
+                    break;
+                case STRATEGY_REDUCE_TERM:
+                    break;
+            }
+        }
+
         if (current_balance == 0) {
             schedule.count = i + 1;
             break;
@@ -99,6 +122,7 @@ LoanSchedule calculate_dynamic_schedule(const Money principal, const Rate annual
 
     return schedule;
 }
+
 LoanSchedule calculate_schedule(const Money principal, const Rate annual_rate, const int months, const LoanType type) {
-    return calculate_dynamic_schedule(principal, annual_rate, months, type, NULL);
+    return calculate_dynamic_schedule(principal, annual_rate, months, type, NULL, STRATEGY_REDUCE_INSTALLMENT);
 }

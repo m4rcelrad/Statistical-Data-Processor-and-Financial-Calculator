@@ -8,7 +8,7 @@ int main(void) {
     int months = 12;
 
     LoanSchedule schedule = calculate_dynamic_schedule(
-        principal, rate, months, LOAN_EQUAL_INSTALLMENTS, NULL
+        principal, rate, months, LOAN_EQUAL_INSTALLMENTS, NULL, STRATEGY_REDUCE_TERM
     );
 
     if (schedule.items) {
@@ -23,13 +23,23 @@ int main(void) {
     payments[2] = TO_MINOR_UNIT(10000);
 
     schedule = calculate_dynamic_schedule(
-        principal, rate, months, LOAN_EQUAL_INSTALLMENTS, payments
+        principal, rate, months, LOAN_EQUAL_INSTALLMENTS, payments, STRATEGY_REDUCE_INSTALLMENT
     );
 
     if (schedule.items) {
-        printf("\n--- WITH EXTRA PAYMENT ---\n");
+        printf("\n--- STRATEGY_REDUCE_INSTALLMENT ---\n");
         print_schedule_to_console(&schedule);
-        save_schedule_to_csv(&schedule, "loan_report_dynamic.csv");
+        free_schedule(&schedule);
+    } else {
+        printf("Calculation failed.\n");
+    }
+
+    schedule = calculate_dynamic_schedule(
+        principal, rate, months, LOAN_EQUAL_INSTALLMENTS, payments, STRATEGY_REDUCE_TERM
+    );
+    if (schedule.items) {
+        printf("\n--- STRATEGY_REDUCE_TERM ---\n");
+        print_schedule_to_console(&schedule);
         free_schedule(&schedule);
     } else {
         printf("Calculation failed.\n");
