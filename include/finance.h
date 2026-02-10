@@ -44,6 +44,6 @@ Rate create_rate(long double value);
 
 LoanSchedule calculate_schedule(Money principal, Rate annual_rate, int months, LoanType type);
 
-LoanSchedule calculate_dynamic_schedule(Money principal, Rate annual_rate, int months, LoanType type, const Money *custom_payments, OverpaymentStrategy strategy);
+LoanSchedule calculate_dynamic_schedule(Money principal, const Rate *annual_rates, int months, LoanType type, const Money *custom_payments, OverpaymentStrategy strategy);
 
 #endif //STATISTICALDATAPROCESSOR_FINANCE_H

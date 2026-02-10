@@ -1,49 +1,28 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "finance.h"
 #include "report.h"
 
 int main(void) {
     Money principal = TO_MINOR_UNIT(100000);
-    Rate rate = create_rate(0.05);
     int months = 12;
 
+    Rate *rates = calloc(months, sizeof(Rate));
+
+    for(int i=0; i<6; i++) rates[i] = create_rate(0.05);
+    for(int i=6; i<12; i++) rates[i] = create_rate(0.09);
+
+    printf("\n--- SCENARIO: VARIABLE RATES (5%% -> 9%%) ---\n");
+
     LoanSchedule schedule = calculate_dynamic_schedule(
-        principal, rate, months, LOAN_EQUAL_INSTALLMENTS, NULL, STRATEGY_REDUCE_TERM
+        principal, rates, months, LOAN_EQUAL_INSTALLMENTS, NULL, STRATEGY_REDUCE_INSTALLMENT
     );
 
     if (schedule.items) {
         print_schedule_to_console(&schedule);
-        save_schedule_to_csv(&schedule, "loan_report.csv");
         free_schedule(&schedule);
-    } else {
-        printf("Calculation failed.\n");
     }
 
-    Money payments[12] = {0};
-    payments[2] = TO_MINOR_UNIT(10000);
-
-    schedule = calculate_dynamic_schedule(
-        principal, rate, months, LOAN_EQUAL_INSTALLMENTS, payments, STRATEGY_REDUCE_INSTALLMENT
-    );
-
-    if (schedule.items) {
-        printf("\n--- STRATEGY_REDUCE_INSTALLMENT ---\n");
-        print_schedule_to_console(&schedule);
-        free_schedule(&schedule);
-    } else {
-        printf("Calculation failed.\n");
-    }
-
-    schedule = calculate_dynamic_schedule(
-        principal, rate, months, LOAN_EQUAL_INSTALLMENTS, payments, STRATEGY_REDUCE_TERM
-    );
-    if (schedule.items) {
-        printf("\n--- STRATEGY_REDUCE_TERM ---\n");
-        print_schedule_to_console(&schedule);
-        free_schedule(&schedule);
-    } else {
-        printf("Calculation failed.\n");
-    }
-
+    free(rates);
     return 0;
 }
