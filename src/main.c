@@ -17,11 +17,14 @@ int main(void) {
         rates[i] = create_rate(0.05);
     }
 
+    MarketScenario market = {
+        .annual_rates = rates
+    };
+
     LoanDefinition loan = {
         .principal = TO_MINOR_UNIT(100000),
         .term_months = months,
         .type = LOAN_EQUAL_INSTALLMENTS,
-        .annual_rates = rates
     };
 
     SimulationConfig config = {
@@ -30,7 +33,7 @@ int main(void) {
     };
 
     LoanSchedule result;
-    FinanceErrorCode err = run_loan_simulation(&loan, &config, &result);
+    FinanceErrorCode err = run_loan_simulation(&loan, &market, &config, &result);
 
     if (err == FINANCE_SUCCESS) {
 

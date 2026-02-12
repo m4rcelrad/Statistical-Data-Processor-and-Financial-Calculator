@@ -4,6 +4,12 @@
 
 #define MAX_LOAN_MONTHS 1200
 
+typedef struct {
+    Money current_balance;
+    Money last_total_payment;
+    int current_month;
+} SimulationState;
+
 Rate create_rate(const long double value) {
     Rate r;
     r.value = value;
@@ -35,16 +41,16 @@ const char* finance_error_string(const FinanceErrorCode code) {
     }
 }
 
-static FinanceErrorCode validate_inputs(const LoanDefinition *loan, LoanSchedule *out_schedule) {
+static FinanceErrorCode validate_inputs(const LoanDefinition *loan, const MarketScenario *market, LoanSchedule *out_schedule) {
     if (!out_schedule) return FINANCE_ERR_ALLOCATION_FAILED;
     if (!loan) return FINANCE_ERR_INVALID_PRINCIPAL;
 
     if (loan->principal <= 0) return FINANCE_ERR_INVALID_PRINCIPAL;
     if (loan->term_months <= 0 || loan->term_months > MAX_LOAN_MONTHS) return FINANCE_ERR_INVALID_MONTHS;
-    if (!loan->annual_rates) return FINANCE_ERR_NULL_RATES;
+    if (!market->annual_rates) return FINANCE_ERR_NULL_RATES;
 
     for (int i = 0; i < loan->term_months; i++) {
-        if (!isfinite(loan->annual_rates[i].value) || loan->annual_rates[i].value < 0.0L) {
+        if (!isfinite(market->annual_rates[i].value) || market->annual_rates[i].value < 0.0L) {
             return FINANCE_ERR_INVALID_RATE;
         }
     }
@@ -88,9 +94,9 @@ static FinanceErrorCode calculate_annuity_pmt(const Money balance, const long do
     return FINANCE_SUCCESS;
 }
 
-static FinanceErrorCode calculate_baseline_payment(const LoanDefinition *loan, const SimulationState *state, const Money interest, Money *out_payment) {
+static FinanceErrorCode calculate_baseline_payment(const LoanDefinition *loan, const MarketScenario *market, const SimulationState *state, const Money interest, Money *out_payment) {
     const int remaining_months = loan->term_months - state->current_month;
-    const Rate current_rate = loan->annual_rates[state->current_month];
+    const Rate current_rate = market->annual_rates[state->current_month];
     const long double monthly_rate = current_rate.value / 12.0L;
 
     if (loan->type == LOAN_EQUAL_INSTALLMENTS) {
@@ -130,12 +136,12 @@ static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
     return FINANCE_SUCCESS;
 }
 
-static FinanceErrorCode loan_step(const LoanDefinition *loan, const SimulationConfig *config, SimulationState *state, Installment *out_installment) {
-    const Rate current_rate = loan->annual_rates[state->current_month];
+static FinanceErrorCode loan_step(const LoanDefinition *loan, const MarketScenario *market, const SimulationConfig *config, SimulationState *state, Installment *out_installment) {
+    const Rate current_rate = market->annual_rates[state->current_month];
     const Money interest = calculate_monthly_interest(state->current_balance, current_rate);
 
     Money required_payment = 0;
-    FinanceErrorCode err = calculate_baseline_payment(loan, state, interest, &required_payment);
+    FinanceErrorCode err = calculate_baseline_payment(loan, market, state, interest, &required_payment);
     if (err != FINANCE_SUCCESS) return err;
 
     Money final_payment = 0;
@@ -178,8 +184,8 @@ static FinanceErrorCode update_totals(LoanSchedule *schedule, const Installment 
     return FINANCE_SUCCESS;
 }
 
-FinanceErrorCode run_loan_simulation(const LoanDefinition *loan, const SimulationConfig *config, LoanSchedule *out_result) {
-    FinanceErrorCode err = validate_inputs(loan, out_result);
+FinanceErrorCode run_loan_simulation(const LoanDefinition *loan, const MarketScenario *market, const SimulationConfig *config, LoanSchedule *out_result) {
+    FinanceErrorCode err = validate_inputs(loan, market, out_result);
     if (err != FINANCE_SUCCESS) return err;
 
     out_result->items = calloc(loan->term_months, sizeof(Installment));
@@ -199,7 +205,7 @@ FinanceErrorCode run_loan_simulation(const LoanDefinition *loan, const Simulatio
         state.current_month = i;
         Installment current_inst = {0};
 
-        err = loan_step(loan, config, &state, &current_inst);
+        err = loan_step(loan, market, config, &state, &current_inst);
         if (err != FINANCE_SUCCESS) {
             free_schedule(out_result);
             return err;

@@ -46,19 +46,16 @@ typedef struct {
     Money principal;
     int term_months;
     LoanType type;
-    const Rate *annual_rates;
 } LoanDefinition;
+
+typedef struct {
+    const Rate *annual_rates;
+} MarketScenario;
 
 typedef struct {
     OverpaymentStrategy strategy;
     const Money *custom_payments;
 } SimulationConfig;
-
-typedef struct {
-    Money current_balance;
-    Money last_total_payment;
-    int current_month;
-} SimulationState;
 
 typedef struct {
     Installment *items;
@@ -73,6 +70,7 @@ const char* finance_error_string(FinanceErrorCode code);
 
 FinanceErrorCode run_loan_simulation(
     const LoanDefinition *loan,
+    const MarketScenario *market,
     const SimulationConfig *config,
     LoanSchedule *out_result
 );
