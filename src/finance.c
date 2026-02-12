@@ -56,16 +56,8 @@ static FinanceErrorCode calculate_annuity_pmt(const Money balance, const long do
 
 }
 
-int calculate_dynamic_schedule(const Money principal, const Rate *annual_rates, const int months, const LoanType type, const Money *custom_payments, const OverpaymentStrategy strategy, LoanSchedule *out_schedule) {
-    if (!out_schedule) return FINANCE_ERR_INVALID_PRINCIPAL;
-
-    if ( type != LOAN_EQUAL_INSTALLMENTS && type != LOAN_DECREASING_INSTALLMENTS) return FINANCE_ERR_INVALID_ARGUMENT;
-    if (strategy != STRATEGY_REDUCE_TERM && strategy != STRATEGY_REDUCE_INSTALLMENT) return FINANCE_ERR_INVALID_ARGUMENT;
-
-    out_schedule->items = NULL;
-    out_schedule->count = 0;
-    out_schedule->total_interest = 0;
-    out_schedule->total_paid = 0;
+static int validate_inputs(const Money principal, const int months, const Rate *annual_rates, LoanSchedule *out_schedule) {
+    if (!out_schedule) return FINANCE_ERR_INVALID_ARGUMENT;
 
     if (principal <= 0) return FINANCE_ERR_INVALID_PRINCIPAL;
 
@@ -77,9 +69,68 @@ int calculate_dynamic_schedule(const Money principal, const Rate *annual_rates, 
         if (!isfinite(annual_rates[i].value) || annual_rates[i].value < 0.0L || annual_rates[i].value > 100.0L) return FINANCE_ERR_INVALID_RATE;
     }
 
+    return FINANCE_SUCCESS;
+}
+
+static Money calculate_monthly_interest(const Money balance, const Rate current_rate) {
+    if (current_rate.value == 0.0L) return 0;
+    const long double factor = current_rate.value / 12.0L;
+    return llroundl((long double)balance * factor);
+}
+
+static int calculate_baseline_payment(const LoanType type, const Money balance, const Rate rate, const int remaining_months, const Money interest, Money *out_payment) {
+    if (type == LOAN_EQUAL_INSTALLMENTS) {
+        Money pmt = 0;
+        const long double factor = rate.value / 12.0L;
+        const int err = calculate_annuity_pmt(balance, factor, remaining_months, &pmt);
+        if (err != FINANCE_SUCCESS) return err;
+        *out_payment = pmt;
+        if (*out_payment < interest && remaining_months > 1) {
+            *out_payment = interest + 1;
+        }
+    } else {
+        *out_payment = balance / remaining_months + interest;
+    }
+    return FINANCE_SUCCESS;
+}
+
+static int determine_payment(const Money user_custom_amount, const Money required_payment, const Money interest, const Money last_total_payment, const Money current_balance, const OverpaymentStrategy strategy, const int month_index,Money *out_final_payment) {
+    if (user_custom_amount > 0) {
+        if (user_custom_amount > current_balance + interest) return FINANCE_ERR_PAYMENT_TOO_LARGE;
+        if (user_custom_amount < interest) return FINANCE_ERR_NEGATIVE_AMORTIZATION;
+
+        *out_final_payment = user_custom_amount;
+    } else {
+        Money payment = 0;
+        if (strategy == STRATEGY_REDUCE_INSTALLMENT) {
+            payment = required_payment;
+        } else {
+            const Money target = (month_index == 0) ? required_payment : last_total_payment;
+            payment = (required_payment > target) ? required_payment : target;
+        }
+
+        if (payment <= interest) {
+            payment = interest + 1;
+        }
+        *out_final_payment = payment;
+    }
+    return FINANCE_SUCCESS;
+}
+
+int calculate_dynamic_schedule(const Money principal, const Rate *annual_rates, const int months, const LoanType type, const Money *custom_payments, const OverpaymentStrategy strategy, LoanSchedule *out_schedule) {
+
+    int error_result = validate_inputs(principal, months, annual_rates, out_schedule);
+    if (error_result != FINANCE_SUCCESS) return error_result;
+
+    if (type != LOAN_EQUAL_INSTALLMENTS && type != LOAN_DECREASING_INSTALLMENTS) return FINANCE_ERR_INVALID_ARGUMENT;
+    if (strategy != STRATEGY_REDUCE_TERM && strategy != STRATEGY_REDUCE_INSTALLMENT) return FINANCE_ERR_INVALID_ARGUMENT;
+
     out_schedule->items = calloc(months, sizeof(Installment));
     if (!out_schedule->items) return FINANCE_ERR_ALLOCATION_FAILED;
+
     out_schedule->count = months;
+    out_schedule->total_interest = 0;
+    out_schedule->total_paid = 0;
 
     Money current_balance = principal;
     Money last_total_payment = 0;
@@ -87,75 +138,30 @@ int calculate_dynamic_schedule(const Money principal, const Rate *annual_rates, 
     for (int i = 0; i < months; i++) {
         const Rate current_rate = annual_rates[i];
 
-        if (!isfinite(current_rate.value) || current_rate.value < 0.0L) {
+        const Money interest = calculate_monthly_interest(current_balance, current_rate);
+
+        Money required_payment = 0;
+        error_result = calculate_baseline_payment(type, current_balance, current_rate, months - i, interest, &required_payment);
+        if (error_result != FINANCE_SUCCESS) {
             free_schedule(out_schedule);
-            return FINANCE_ERR_INVALID_RATE;
-        }
-
-        const long double monthly_factor = current_rate.value / 12.0L;
-        const int zero_interest = current_rate.value == 0.0L;
-        const int remaining_months = months - i;
-
-        Money interest = 0;
-        if (!zero_interest) {
-            interest = llroundl((long double)current_balance * monthly_factor);
-        }
-
-        Money required_total_payment = 0;
-
-        if (type == LOAN_EQUAL_INSTALLMENTS) {
-            Money pmt = 0;
-            FinanceErrorCode err = calculate_annuity_pmt(current_balance, monthly_factor, remaining_months, &pmt);
-            if (err != FINANCE_SUCCESS) {
-                free_schedule(out_schedule);
-                return err;
-            }
-            required_total_payment = pmt;
-            if (required_total_payment < interest && remaining_months > 1) required_total_payment = interest + 1;
-        } else {
-            const Money required_capital_part = current_balance / remaining_months;
-            required_total_payment = required_capital_part + interest;
+            return error_result;
         }
 
         Money final_payment = 0;
-        Money final_capital = 0;
+        const Money custom_amount = (custom_payments) ? custom_payments[i] : 0;
 
-        const Money user_custom_amount = custom_payments != NULL ? custom_payments[i] : 0;
-
-        if (user_custom_amount > 0) {
-
-            if (user_custom_amount > current_balance + interest) {
-                free_schedule(out_schedule);
-                return FINANCE_ERR_PAYMENT_TOO_LARGE;
-            }
-
-            final_payment = user_custom_amount;
-
-            if (final_payment < interest) {
-                free_schedule(out_schedule);
-                return FINANCE_ERR_NEGATIVE_AMORTIZATION;
-            }
-            final_capital = final_payment - interest;
-        } else {
-            if (strategy == STRATEGY_REDUCE_INSTALLMENT) {
-                final_payment = required_total_payment;
-            }
-            else {
-                const Money target_payment = i == 0 ? required_total_payment : last_total_payment;
-                final_payment = required_total_payment > target_payment ? required_total_payment : target_payment;
-            }
-
-            if (final_payment <= interest) {
-                final_payment = interest + 1;
-            }
-            final_capital = final_payment - interest;
+        error_result = determine_payment(custom_amount, required_payment, interest, last_total_payment, current_balance, strategy, i, &final_payment);
+        if (error_result != FINANCE_SUCCESS) {
+            free_schedule(out_schedule);
+            return error_result;
         }
 
+        Money final_capital = final_payment - interest;
+
         if (final_capital > current_balance) final_capital = current_balance;
-        if (i == months - 1 && user_custom_amount == 0) final_capital = current_balance;
+        if (i == months - 1 && custom_amount == 0) final_capital = current_balance;
 
         final_payment = final_capital + interest;
-
         last_total_payment = final_payment;
 
         current_balance -= final_capital;
@@ -170,7 +176,6 @@ int calculate_dynamic_schedule(const Money principal, const Rate *annual_rates, 
             free_schedule(out_schedule);
             return FINANCE_ERR_NUMERIC_OVERFLOW;
         }
-
         out_schedule->total_interest += interest;
         out_schedule->total_paid += final_payment;
 
@@ -200,7 +205,7 @@ int calculate_schedule(const Money principal, const Rate annual_rate, const int 
     return result;
 }
 
-const char* finance_error_string(FinanceErrorCode code)
+const char* finance_error_string(const FinanceErrorCode code)
 {
     switch (code)
     {
