@@ -43,6 +43,24 @@ typedef struct {
 } Installment;
 
 typedef struct {
+    Money principal;
+    int term_months;
+    LoanType type;
+    const Rate *annual_rates;
+} LoanDefinition;
+
+typedef struct {
+    OverpaymentStrategy strategy;
+    const Money *custom_payments;
+} SimulationConfig;
+
+typedef struct {
+    Money current_balance;
+    Money last_total_payment;
+    int current_month;
+} SimulationState;
+
+typedef struct {
     Installment *items;
     int count;
     Money total_interest;
@@ -50,11 +68,13 @@ typedef struct {
 } LoanSchedule;
 
 void free_schedule(LoanSchedule *schedule);
-
 Rate create_rate(long double value);
+const char* finance_error_string(FinanceErrorCode code);
 
-int calculate_schedule(Money principal, Rate annual_rate, int months, LoanType type, LoanSchedule *out_schedule);
-
-int calculate_dynamic_schedule(Money principal, const Rate *annual_rates, int months, LoanType type, const Money *custom_payments, OverpaymentStrategy strategy, LoanSchedule *out_schedule);
+FinanceErrorCode run_loan_simulation(
+    const LoanDefinition *loan,
+    const SimulationConfig *config,
+    LoanSchedule *out_result
+);
 
 #endif //STATISTICALDATAPROCESSOR_FINANCE_H
