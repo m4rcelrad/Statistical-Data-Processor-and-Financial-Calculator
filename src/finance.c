@@ -130,13 +130,61 @@ static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
     return FINANCE_SUCCESS;
 }
 
-FinanceErrorCode run_loan_simulation(const LoanDefinition *loan, const SimulationConfig *config, LoanSchedule *out_result) {
+static FinanceErrorCode loan_step(const LoanDefinition *loan, const SimulationConfig *config, SimulationState *state, Installment *out_installment) {
+    const Rate current_rate = loan->annual_rates[state->current_month];
+    const Money interest = calculate_monthly_interest(state->current_balance, current_rate);
 
+    Money required_payment = 0;
+    FinanceErrorCode err = calculate_baseline_payment(loan, state, interest, &required_payment);
+    if (err != FINANCE_SUCCESS) return err;
+
+    Money final_payment = 0;
+    err = determine_actual_payment(config, state, required_payment, interest, &final_payment);
+    if (err != FINANCE_SUCCESS) return err;
+
+    Money final_capital = final_payment - interest;
+
+    if (final_capital > state->current_balance) final_capital = state->current_balance;
+
+    const Money custom_amount = (config->custom_payments) ? config->custom_payments[state->current_month] : 0;
+    if (state->current_month == loan->term_months - 1 && custom_amount == 0) final_capital = state->current_balance;
+
+    final_payment = final_capital + interest;
+
+    state->last_total_payment = final_payment;
+    state->current_balance -= final_capital;
+    if (state->current_balance < 0) state->current_balance = 0;
+
+    out_installment->capital = final_capital;
+    out_installment->interest = interest;
+    out_installment->payment = final_payment;
+    out_installment->balance = state->current_balance;
+    return FINANCE_SUCCESS;
+}
+
+static FinanceErrorCode append_result(const LoanSchedule *schedule, const int index, const Installment *installment) {
+    if (index < 0 || index >= schedule->count) return FINANCE_ERR_NUMERIC_OVERFLOW;
+
+    schedule->items[index] = *installment;
+    return FINANCE_SUCCESS;
+}
+
+static FinanceErrorCode update_totals(LoanSchedule *schedule, const Installment *installment) {
+    if (schedule->total_interest > LLONG_MAX - installment->interest) return FINANCE_ERR_NUMERIC_OVERFLOW;
+    if (schedule->total_paid > LLONG_MAX - installment->payment) return FINANCE_ERR_NUMERIC_OVERFLOW;
+
+    schedule->total_interest += installment->interest;
+    schedule->total_paid += installment->payment;
+    return FINANCE_SUCCESS;
+}
+
+FinanceErrorCode run_loan_simulation(const LoanDefinition *loan, const SimulationConfig *config, LoanSchedule *out_result) {
     FinanceErrorCode err = validate_inputs(loan, out_result);
     if (err != FINANCE_SUCCESS) return err;
 
     out_result->items = calloc(loan->term_months, sizeof(Installment));
     if (!out_result->items) return FINANCE_ERR_ALLOCATION_FAILED;
+
     out_result->count = loan->term_months;
     out_result->total_interest = 0;
     out_result->total_paid = 0;
@@ -149,49 +197,25 @@ FinanceErrorCode run_loan_simulation(const LoanDefinition *loan, const Simulatio
 
     for (int i = 0; i < loan->term_months; i++) {
         state.current_month = i;
-        const Rate current_rate = loan->annual_rates[i];
+        Installment current_inst = {0};
 
-        const Money interest = calculate_monthly_interest(state.current_balance, current_rate);
-
-        Money required_payment = 0;
-        err = calculate_baseline_payment(loan, &state, interest, &required_payment);
+        err = loan_step(loan, config, &state, &current_inst);
         if (err != FINANCE_SUCCESS) {
             free_schedule(out_result);
             return err;
         }
 
-        Money final_payment = 0;
-        err = determine_actual_payment(config, &state, required_payment, interest, &final_payment);
+        err = append_result(out_result, i, &current_inst);
         if (err != FINANCE_SUCCESS) {
             free_schedule(out_result);
             return err;
         }
 
-        Money final_capital = final_payment - interest;
-
-        if (final_capital > state.current_balance) final_capital = state.current_balance;
-
-        const Money custom_amount = config->custom_payments ? config->custom_payments[i] : 0;
-        if (i == loan->term_months - 1 && custom_amount == 0) final_capital = state.current_balance;
-
-        final_payment = final_capital + interest;
-
-        state.last_total_payment = final_payment;
-        state.current_balance -= final_capital;
-        if (state.current_balance < 0) state.current_balance = 0;
-
-        out_result->items[i].capital = final_capital;
-        out_result->items[i].interest = interest;
-        out_result->items[i].payment = final_payment;
-        out_result->items[i].balance = state.current_balance;
-
-        if (out_result->total_interest > LLONG_MAX - interest || out_result->total_paid > LLONG_MAX - final_payment) {
+        err = update_totals(out_result, &current_inst);
+        if (err != FINANCE_SUCCESS) {
             free_schedule(out_result);
-            return FINANCE_ERR_NUMERIC_OVERFLOW;
+            return err;
         }
-
-        out_result->total_interest += interest;
-        out_result->total_paid += final_payment;
 
         if (state.current_balance == 0) {
             out_result->count = i + 1;
