@@ -1,8 +1,6 @@
 #ifndef STATISTICALDATAPROCESSOR_FINANCE_H
 #define STATISTICALDATAPROCESSOR_FINANCE_H
 
-#include <math.h>
-
 #define CURRENCY_SCALE 100
 
 #define TO_MINOR_UNIT(major) ((Money)llroundl((long double)(major) * CURRENCY_SCALE))
@@ -24,6 +22,19 @@ typedef enum {
     STRATEGY_REDUCE_INSTALLMENT
 } OverpaymentStrategy;
 
+typedef enum {
+    FINANCE_SUCCESS = 0,
+    FINANCE_ERR_INVALID_PRINCIPAL,
+    FINANCE_ERR_INVALID_MONTHS,
+    FINANCE_ERR_INVALID_ARGUMENT,
+    FINANCE_ERR_NULL_RATES,
+    FINANCE_ERR_INVALID_RATE,
+    FINANCE_ERR_ALLOCATION_FAILED,
+    FINANCE_ERR_NEGATIVE_AMORTIZATION,
+    FINANCE_ERR_PAYMENT_TOO_LARGE,
+    FINANCE_ERR_NUMERIC_OVERFLOW,
+} FinanceErrorCode;
+
 typedef struct {
     Money capital;
     Money interest;
@@ -42,8 +53,8 @@ void free_schedule(LoanSchedule *schedule);
 
 Rate create_rate(long double value);
 
-LoanSchedule calculate_schedule(Money principal, Rate annual_rate, int months, LoanType type);
+int calculate_schedule(Money principal, Rate annual_rate, int months, LoanType type, LoanSchedule *out_schedule);
 
-LoanSchedule calculate_dynamic_schedule(Money principal, const Rate *annual_rates, int months, LoanType type, const Money *custom_payments, OverpaymentStrategy strategy);
+int calculate_dynamic_schedule(Money principal, const Rate *annual_rates, int months, LoanType type, const Money *custom_payments, OverpaymentStrategy strategy, LoanSchedule *out_schedule);
 
 #endif //STATISTICALDATAPROCESSOR_FINANCE_H
