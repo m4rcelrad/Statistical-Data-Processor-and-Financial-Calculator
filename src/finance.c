@@ -41,9 +41,20 @@ const char* finance_error_string(const FinanceErrorCode code) {
     }
 }
 
+static FinanceErrorCode validate_config(const LoanDefinition *loan, const SimulationConfig *config)
+{
+    if (!config)
+        return FINANCE_ERR_INVALID_ARGUMENT;
+
+    if (config->strategy != STRATEGY_REDUCE_TERM &&
+        config->strategy != STRATEGY_REDUCE_INSTALLMENT)
+        return FINANCE_ERR_INVALID_ARGUMENT;
+
+    return FINANCE_SUCCESS;
+}
+
 static FinanceErrorCode validate_inputs(const LoanDefinition *loan, const MarketScenario *market, LoanSchedule *out_schedule) {
-    if (!out_schedule) return FINANCE_ERR_ALLOCATION_FAILED;
-    if (!loan) return FINANCE_ERR_INVALID_PRINCIPAL;
+    if (!out_schedule || !loan) return FINANCE_ERR_INVALID_ARGUMENT;
 
     if (loan->principal <= 0) return FINANCE_ERR_INVALID_PRINCIPAL;
     if (loan->term_months <= 0 || loan->term_months > MAX_LOAN_MONTHS) return FINANCE_ERR_INVALID_MONTHS;
@@ -118,7 +129,7 @@ static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
     const Money custom_amount = config->custom_payments ? config->custom_payments[state->current_month] : 0;
 
     if (custom_amount > 0) {
-        if (custom_amount > (state->current_balance + interest) * 2) return FINANCE_ERR_PAYMENT_TOO_LARGE;
+        if (custom_amount > state->current_balance + interest) return FINANCE_ERR_PAYMENT_TOO_LARGE;
         if (custom_amount < interest) return FINANCE_ERR_NEGATIVE_AMORTIZATION;
         *out_final_payment = custom_amount;
     } else {
@@ -186,6 +197,9 @@ static FinanceErrorCode update_totals(LoanSchedule *schedule, const Installment 
 
 FinanceErrorCode run_loan_simulation(const LoanDefinition *loan, const MarketScenario *market, const SimulationConfig *config, LoanSchedule *out_result) {
     FinanceErrorCode err = validate_inputs(loan, market, out_result);
+    if (err != FINANCE_SUCCESS) return err;
+
+    err = validate_config(loan, config);
     if (err != FINANCE_SUCCESS) return err;
 
     out_result->items = calloc(loan->term_months, sizeof(Installment));
