@@ -7,9 +7,11 @@ include_directories(include)
 file(GLOB SOURCES "src/*.c")
 
 add_executable(StatisticalDataProcessor ${SOURCES}
-        include/finance.h
-        src/finance.c
+        include/loan_math.h
+        src/loan_math.c
         include/report.h
         src/report.c
         src/money.c
-        include/money.h)
+        include/money.h
+        src/loan_simulation.c
+        include/loan_simulation.h)

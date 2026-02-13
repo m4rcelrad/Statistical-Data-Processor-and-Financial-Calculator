@@ -7,15 +7,9 @@ typedef struct {
     long double value;
 } Rate;
 
-typedef enum {
-    LOAN_EQUAL_INSTALLMENTS,
-    LOAN_DECREASING_INSTALLMENTS
-} LoanType;
+typedef enum { LOAN_EQUAL_INSTALLMENTS, LOAN_DECREASING_INSTALLMENTS } LoanType;
 
-typedef enum {
-    STRATEGY_REDUCE_TERM,
-    STRATEGY_REDUCE_INSTALLMENT
-} OverpaymentStrategy;
+typedef enum { STRATEGY_REDUCE_TERM, STRATEGY_REDUCE_INSTALLMENT } OverpaymentStrategy;
 
 typedef enum {
     FINANCE_SUCCESS = 0,
@@ -59,15 +53,21 @@ typedef struct {
     Money total_paid;
 } LoanSchedule;
 
+typedef struct {
+    Money current_balance;
+    Money last_total_payment;
+    int current_month;
+} SimulationState;
+
 void free_schedule(LoanSchedule *schedule);
 Rate create_rate(long double value);
-const char* finance_error_string(FinanceErrorCode code);
+const char *finance_error_string(FinanceErrorCode code);
 
-FinanceErrorCode run_loan_simulation(
-    const LoanDefinition *loan,
-    const MarketScenario *market,
-    const SimulationConfig *config,
-    LoanSchedule *out_result
-);
+Money calculate_monthly_interest(Money balance, Rate current_rate);
+FinanceErrorCode calculate_baseline_payment(const LoanDefinition *loan,
+                                            const MarketScenario *market,
+                                            const SimulationState *state,
+                                            Money interest,
+                                            Money *out_payment);
 
-#endif //STATISTICALDATAPROCESSOR_FINANCE_H
+#endif // STATISTICALDATAPROCESSOR_FINANCE_H

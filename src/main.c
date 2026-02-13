@@ -1,7 +1,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "finance.h"
+#include "loan_math.h"
+#include "loan_simulation.h"
 #include "money.h"
 #include "report.h"
 

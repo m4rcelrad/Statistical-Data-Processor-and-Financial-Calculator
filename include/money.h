@@ -28,4 +28,4 @@ bool money_lte(Money a, Money b);
 bool money_is_zero(Money a);
 bool money_is_positive(Money a);
 
-#endif //STATISTICALDATAPROCESSOR_MONEY_H
+#endif // STATISTICALDATAPROCESSOR_MONEY_H
