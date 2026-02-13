@@ -1,12 +1,7 @@
 #ifndef STATISTICALDATAPROCESSOR_FINANCE_H
 #define STATISTICALDATAPROCESSOR_FINANCE_H
 
-#define CURRENCY_SCALE 100
-
-#define TO_MINOR_UNIT(major) ((Money)llroundl((long double)(major) * CURRENCY_SCALE))
-#define TO_MAJOR_UNIT(minor) ((long double)(minor) / (long double)CURRENCY_SCALE)
-
-typedef long long Money;
+#include "money.h"
 
 typedef struct {
     long double value;

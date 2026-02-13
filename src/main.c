@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "finance.h"
+#include "money.h"
 #include "report.h"
 
 int main(void) {
@@ -22,7 +23,7 @@ int main(void) {
     };
 
     LoanDefinition loan = {
-        .principal = TO_MINOR_UNIT(100000),
+        .principal = money_from_major(100000.0),
         .term_months = months,
         .type = LOAN_EQUAL_INSTALLMENTS,
     };

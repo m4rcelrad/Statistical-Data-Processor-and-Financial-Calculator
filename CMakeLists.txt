@@ -10,4 +10,6 @@ add_executable(StatisticalDataProcessor ${SOURCES}
         include/finance.h
         src/finance.c
         include/report.h
-        src/report.c)
+        src/report.c
+        src/money.c
+        include/money.h)
