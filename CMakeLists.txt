@@ -14,4 +14,7 @@ add_executable(StatisticalDataProcessor ${SOURCES}
         src/money.c
         include/money.h
         src/loan_simulation.c
-        include/loan_simulation.h)
+        include/loan_simulation.h
+        tests/unity/unity.c
+        tests/unity/unity.h
+        tests/unity/unity_internals.h)
