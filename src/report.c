@@ -15,46 +15,57 @@ static void format_money_str(char *buffer, const Money amount) {
     sprintf(buffer, "%lld.%02lld", major, minor);
 }
 
-void print_schedule_to_console(const LoanSchedule *schedule) {
+void print_report_header(void) {
     printf("\nLoan Schedule:\n");
     printf("-------------------------------------------------------------------\n");
     printf("| %3s | %12s | %12s | %12s | %12s |\n",
-           "No.",
-           "Principal",
-           "Interest",
-           "Payment",
-           "Balance");
+           "No.", "Principal", "Interest", "Payment", "Balance");
     printf("-------------------------------------------------------------------\n");
+}
 
+void print_report_row(const int month_idx, const Installment *inst) {
     char buf[64];
+    printf("| %3d | ", month_idx + 1);
 
-    for (int i = 0; i < schedule->count; i++) {
-        printf("| %3d | ", i + 1);
-        format_money_str(buf, schedule->items[i].capital);
-        printf("%12s | ", buf);
+    format_money_str(buf, inst->capital);
+    printf("%12s | ", buf);
 
-        format_money_str(buf, schedule->items[i].interest);
-        printf("%12s | ", buf);
+    format_money_str(buf, inst->interest);
+    printf("%12s | ", buf);
 
-        format_money_str(buf, schedule->items[i].payment);
-        printf("%12s | ", buf);
+    format_money_str(buf, inst->payment);
+    printf("%12s | ", buf);
 
-        format_money_str(buf, schedule->items[i].balance);
-        printf("%12s |\n", buf);
-    }
+    format_money_str(buf, inst->balance);
+    printf("%12s |\n", buf);
+}
 
+void print_report_summary(const Money total_interest, const Money total_paid) {
+    char buf[64];
     printf("-------------------------------------------------------------------\n");
 
-    Money total_principal = money_sub(schedule->total_paid, schedule->total_interest);
+    const Money total_principal = money_sub(total_paid, total_interest);
     format_money_str(buf, total_principal);
     printf("Total Principal Paid: %15s\n", buf);
 
-    format_money_str(buf, schedule->total_interest);
+    format_money_str(buf, total_interest);
     printf("Total Interest Cost:  %15s\n", buf);
 
-    format_money_str(buf, schedule->total_paid);
+    format_money_str(buf, total_paid);
     printf("Total Amount Paid:    %15s\n", buf);
     printf("-------------------------------------------------------------------\n");
+}
+
+void print_schedule_to_console(const LoanSchedule *schedule) {
+    if (!schedule) return;
+
+    print_report_header();
+
+    for (int i = 0; i < schedule->count; i++) {
+        print_report_row(i, &schedule->items[i]);
+    }
+
+    print_report_summary(schedule->total_interest, schedule->total_paid);
 }
 
 int save_schedule_to_csv(const LoanSchedule *schedule, const char *filename) {

@@ -73,10 +73,12 @@ static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
 }
 
 static FinanceErrorCode
-append_result(const LoanSchedule *schedule, const int index, const Installment *installment) {
-    if (index < 0 || index >= schedule->count)
+append_result(LoanSchedule *schedule, const int max_capacity, const Installment *installment) {
+    if (schedule->count >= max_capacity) {
         return FINANCE_ERR_NUMERIC_OVERFLOW;
-    schedule->items[index] = *installment;
+    }
+    schedule->items[schedule->count] = *installment;
+    schedule->count++;
     return FINANCE_SUCCESS;
 }
 
@@ -92,11 +94,36 @@ static FinanceErrorCode update_totals(LoanSchedule *schedule, const Installment 
     return FINANCE_SUCCESS;
 }
 
-static FinanceErrorCode loan_step(const LoanDefinition *loan,
-                                  const MarketScenario *market,
-                                  const SimulationConfig *config,
-                                  SimulationState *state,
-                                  Installment *out_installment) {
+void loan_simulation_init(SimulationState *state, Money principal) {
+    state->current_balance = principal;
+    state->last_total_payment = MONEY_ZERO;
+    state->current_month = 0;
+}
+
+bool loan_simulation_is_complete(const LoanDefinition *loan, const SimulationState *state) {
+    if (!loan || !state)
+        return true;
+
+    if (money_lte(state->current_balance, MONEY_ZERO))
+        return true;
+
+    if (state->current_month >= loan->term_months)
+        return true;
+
+    return false;
+}
+
+FinanceErrorCode loan_simulation_step(const LoanDefinition *loan,
+                                      const MarketScenario *market,
+                                      const SimulationConfig *config,
+                                      SimulationState *state,
+                                      Installment *out_installment) {
+    if (!loan || !market || !config || !state || !out_installment)
+        return FINANCE_ERR_INVALID_ARGUMENT;
+
+    if (state->current_month >= loan->term_months)
+        return FINANCE_ERR_INVALID_MONTHS;
+
     const Rate current_rate = market->annual_rates[state->current_month];
 
     const Money interest = calculate_monthly_interest(state->current_balance, current_rate);
@@ -114,19 +141,21 @@ static FinanceErrorCode loan_step(const LoanDefinition *loan,
 
     Money final_capital = money_sub(final_payment, interest);
 
-    if (money_gt(final_capital, state->current_balance))
+    if (money_gt(final_capital, state->current_balance)) {
         final_capital = state->current_balance;
+    }
 
-    const Money custom_amount =
-        (config->custom_payments) ? config->custom_payments[state->current_month] : MONEY_ZERO;
-    if (state->current_month == loan->term_months - 1 && money_is_zero(custom_amount))
+    bool is_last_month = (state->current_month == loan->term_months - 1);
+    Money potential_balance = money_sub(state->current_balance, final_capital);
+
+    if (is_last_month || money_lte(potential_balance, MONEY_ZERO)) {
         final_capital = state->current_balance;
-
-    final_payment = money_add(final_capital, interest);
+        final_payment = money_add(final_capital, interest);
+    }
 
     state->last_total_payment = final_payment;
-
     state->current_balance = money_sub(state->current_balance, final_capital);
+
     if (money_lt(state->current_balance, MONEY_ZERO))
         state->current_balance = MONEY_ZERO;
 
@@ -134,6 +163,8 @@ static FinanceErrorCode loan_step(const LoanDefinition *loan,
     out_installment->interest = interest;
     out_installment->payment = final_payment;
     out_installment->balance = state->current_balance;
+
+    state->current_month++;
 
     return FINANCE_SUCCESS;
 }
@@ -154,25 +185,23 @@ FinanceErrorCode run_loan_simulation(const LoanDefinition *loan,
     if (!out_result->items)
         return FINANCE_ERR_ALLOCATION_FAILED;
 
-    out_result->count = loan->term_months;
+    out_result->count = 0;
     out_result->total_interest = MONEY_ZERO;
     out_result->total_paid = MONEY_ZERO;
 
-    SimulationState state = {.current_balance = loan->principal,
-                             .last_total_payment = MONEY_ZERO,
-                             .current_month = 0};
+    SimulationState state;
+    loan_simulation_init(&state, loan->principal);
 
     for (int i = 0; i < loan->term_months; i++) {
-        state.current_month = i;
         Installment current_inst = {0};
 
-        err = loan_step(loan, market, config, &state, &current_inst);
+        err = loan_simulation_step(loan, market, config, &state, &current_inst);
         if (err != FINANCE_SUCCESS) {
             free_schedule(out_result);
             return err;
         }
 
-        err = append_result(out_result, i, &current_inst);
+        err = append_result(out_result, loan->term_months, &current_inst);
         if (err != FINANCE_SUCCESS) {
             free_schedule(out_result);
             return err;
@@ -184,8 +213,7 @@ FinanceErrorCode run_loan_simulation(const LoanDefinition *loan,
             return err;
         }
 
-        if (money_is_zero(state.current_balance)) {
-            out_result->count = i + 1;
+        if (loan_simulation_is_complete(loan, &state)) {
             break;
         }
     }

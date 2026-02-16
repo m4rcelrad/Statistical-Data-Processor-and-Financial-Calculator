@@ -1,4 +1,3 @@
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "loan_math.h"
@@ -40,6 +39,8 @@ int main(void) {
     if (err == FINANCE_SUCCESS) {
 
         print_schedule_to_console(&result);
+
+        save_schedule_to_csv(&result, "report.csv");
 
         free_schedule(&result);
     } else {
