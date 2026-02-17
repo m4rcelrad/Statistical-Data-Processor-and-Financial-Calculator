@@ -9,6 +9,7 @@ set(CORE_SOURCES
         src/loan_math.c
         src/loan_simulation.c
         src/report.c
+        src/dataframe.c
 )
 
 add_executable(StatisticalDataProcessor
