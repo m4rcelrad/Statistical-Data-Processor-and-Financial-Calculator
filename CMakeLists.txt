@@ -25,6 +25,7 @@ add_executable(run_tests
         tests/main_tests.c
         tests/tests_money.c
         tests/tests_loan_math.c
+        tests/tests_loan_simulation.c
         ${UNITY_DIR}/unity.c
         ${CORE_SOURCES}
 )
