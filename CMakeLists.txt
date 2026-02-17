@@ -22,9 +22,12 @@ set(UNITY_DIR tests/unity)
 include_directories(${UNITY_DIR})
 
 add_executable(run_tests
+        tests/main_tests.c
         tests/tests_money.c
+        tests/tests_loan_math.c
         ${UNITY_DIR}/unity.c
         ${CORE_SOURCES}
 )
 
 target_compile_definitions(run_tests PRIVATE UNITY_INCLUDE_DOUBLE)
+target_link_libraries(run_tests m)

@@ -2,9 +2,6 @@
 #include "money.h"
 #include <math.h>
 
-void setUp(void) {}
-void tearDown(void) {}
-
 void test_MoneyFromMajor_Standard(void) {
     Money m = money_from_major(123.45);
     TEST_ASSERT_EQUAL_INT64(12345, m.value);
@@ -87,9 +84,7 @@ void test_MoneyIsZero(void) {
     TEST_ASSERT_FALSE(money_is_zero(money_from_major(0.01)));
 }
 
-int main(void) {
-    UNITY_BEGIN();
-
+void run_money_tests(void) {
     RUN_TEST(test_MoneyFromMajor_Standard);
     RUN_TEST(test_MoneyFromMajor_Rounding);
     RUN_TEST(test_MoneyToMajor);
@@ -102,6 +97,4 @@ int main(void) {
     RUN_TEST(test_MoneyDiv_ByZero);
     RUN_TEST(test_MoneyComparisons);
     RUN_TEST(test_MoneyIsZero);
-
-    return UNITY_END();
 }
