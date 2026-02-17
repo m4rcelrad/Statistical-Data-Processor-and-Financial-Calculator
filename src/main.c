@@ -3,7 +3,7 @@
 int main(void) {
     const char *filename = "report.csv";
 
-    DataFrame *df = read_csv(filename);
+    DataFrame *df = read_csv(filename, true);
 
     if (!df) return 1;
 

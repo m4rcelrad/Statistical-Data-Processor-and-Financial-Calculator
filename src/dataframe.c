@@ -6,7 +6,7 @@
 #define MAX_LINE_LENGTH 2048
 #define DELIMITERS ";,\r\n"
 
-DataFrame* df_create(const int rows, const int cols) {
+DataFrame* create_dataframe(const int rows, const int cols) {
     DataFrame *df = malloc(sizeof(DataFrame));
     if (!df) return NULL;
 
@@ -43,7 +43,7 @@ void free_dataframe(DataFrame *df) {
     free(df);
 }
 
-DataFrame* read_csv(const char *path) {
+DataFrame* read_csv(const char *path, const bool has_header) {
     FILE *file = fopen(path, "r");
     if (!file) {
         perror("Error opening file");
@@ -64,34 +64,39 @@ DataFrame* read_csv(const char *path) {
         token = strtok(NULL, DELIMITERS);
     }
 
-    int rows = 0;
+    int rows = has_header ? 0 : 1;
     while (fgets(line, sizeof(line), file)) {
         if (strlen(line) > 1) rows++;
     }
 
     rewind(file);
 
-    DataFrame *df = df_create(rows, cols);
+    DataFrame *df = create_dataframe(rows, cols);
     if (!df) {
         fclose(file);
         return NULL;
     }
 
-    if (fgets(line, sizeof(line), file)) {
-        char temp_line[MAX_LINE_LENGTH];
-        strcpy(temp_line, line);
-
-        int c = 0;
-        const char *header = strtok(temp_line, DELIMITERS);
-        while (header && c < cols) {
-            df->columns[c] = strdup(header);
-            header = strtok(NULL, DELIMITERS);
-            c++;
+    if (has_header) {
+        if (fgets(line, sizeof(line), file)) {
+            int c = 0;
+            const char *header = strtok(line, DELIMITERS);
+            while (header && c < cols) {
+                df->columns[c] = strdup(header);
+                header = strtok(NULL, DELIMITERS);
+                c++;
+            }
+        }
+    } else {
+        for (int c = 0; c < cols; c++) {
+            char buffer[32];
+            sprintf(buffer, "Col %d", c + 1);
+            df->columns[c] = strdup(buffer);
         }
     }
 
     int r = 0;
-    while (fgets(line, sizeof(line), file) && r < rows) {
+    while (r < rows && fgets(line, sizeof(line), file)) {
         int c = 0;
         const char *val_str = strtok(line, DELIMITERS);
         while (val_str && c < cols) {
