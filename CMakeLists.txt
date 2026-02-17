@@ -1,20 +1,30 @@
-cmake_minimum_required(VERSION 4.1)
+cmake_minimum_required(VERSION 3.20)
 project(StatisticalDataProcessor C)
 
 set(CMAKE_C_STANDARD 17)
-
 include_directories(include)
-file(GLOB SOURCES "src/*.c")
 
-add_executable(StatisticalDataProcessor ${SOURCES}
-        include/loan_math.h
-        src/loan_math.c
-        include/report.h
-        src/report.c
+set(CORE_SOURCES
         src/money.c
-        include/money.h
+        src/loan_math.c
         src/loan_simulation.c
-        include/loan_simulation.h
-        tests/unity/unity.c
-        tests/unity/unity.h
-        tests/unity/unity_internals.h)
+        src/report.c
+)
+
+add_executable(StatisticalDataProcessor
+        src/main.c
+        ${CORE_SOURCES}
+)
+
+enable_testing()
+
+set(UNITY_DIR tests/unity)
+include_directories(${UNITY_DIR})
+
+add_executable(run_tests
+        tests/tests_money.c
+        ${UNITY_DIR}/unity.c
+        ${CORE_SOURCES}
+)
+
+target_compile_definitions(run_tests PRIVATE UNITY_INCLUDE_DOUBLE)
