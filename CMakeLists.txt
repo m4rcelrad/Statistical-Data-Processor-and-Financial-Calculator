@@ -29,6 +29,7 @@ add_executable(run_tests
         tests/tests_loan_simulation.c
         ${UNITY_DIR}/unity.c
         ${CORE_SOURCES}
+        tests/tests_dataframe.c
 )
 
 target_compile_definitions(run_tests PRIVATE UNITY_INCLUDE_DOUBLE)
