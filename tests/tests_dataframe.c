@@ -1,5 +1,7 @@
 #include "unity/unity.h"
 #include "dataframe.h"
+#include "csv_reader.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -137,4 +139,6 @@ void run_dataframe_tests(void) {
     RUN_TEST(test_LoadCsv_NoHeader);
     RUN_TEST(test_LoadCsv_FileNotFound);
     RUN_TEST(test_LoadCsv_EmptyFile);
+    RUN_TEST(test_LoadCsv_ColumnMismatch);
+    RUN_TEST(test_LoadCsv_MissingValues);
 }

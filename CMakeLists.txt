@@ -10,6 +10,7 @@ set(CORE_SOURCES
         src/loan_simulation.c
         src/report.c
         src/dataframe.c
+        src/csv_reader.c
 )
 
 add_executable(StatisticalDataProcessor
@@ -27,9 +28,9 @@ add_executable(run_tests
         tests/tests_money.c
         tests/tests_loan_math.c
         tests/tests_loan_simulation.c
+        tests/tests_dataframe.c
         ${UNITY_DIR}/unity.c
         ${CORE_SOURCES}
-        tests/tests_dataframe.c
 )
 
 target_compile_definitions(run_tests PRIVATE UNITY_INCLUDE_DOUBLE)
