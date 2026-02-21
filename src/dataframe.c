@@ -57,10 +57,26 @@ DataFrame *create_dataframe(const int rows, const int cols) {
 
     df->rows = rows;
     df->cols = cols;
+
     df->columns = calloc(cols, sizeof(char *));
-    df->data = malloc(rows * sizeof(double *));
+    if (!df->columns) {
+        free(df);
+        return NULL;
+    }
+
+    df->data = calloc(rows, sizeof(double*));
+    if (!df->data) {
+        free(df->columns);
+        free(df);
+        return NULL;
+    }
+
     for (int i = 0; i < rows; i++) {
         df->data[i] = calloc(cols, sizeof(double));
+        if (!df->data[i]) {
+            free_dataframe(df);
+            return NULL;
+        }
     }
 
     return df;
