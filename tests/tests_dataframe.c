@@ -32,8 +32,8 @@ void test_CreateDataFrame(void) {
 }
 
 void test_LoadCsv_WithHeader(void) {
-    create_temp_csv("Cena;Ilosc\n10.5;5\n20.0;2");
-    DataFrame *df = read_csv(TEST_CSV_FILE, true);
+    create_temp_csv("Cena;Ilosc\n10.5;5\n20.0;2\n");
+    DataFrame *df = read_csv(TEST_CSV_FILE, true, ";");
 
     TEST_ASSERT_NOT_NULL(df);
     TEST_ASSERT_EQUAL_INT(2, df->rows);
@@ -53,15 +53,15 @@ void test_LoadCsv_WithHeader(void) {
 }
 
 void test_LoadCsv_NoHeader(void) {
-    create_temp_csv("10.5;5\n20.0;2");
-    DataFrame *df = read_csv(TEST_CSV_FILE, false);
+    create_temp_csv("10.5;5\n20.0;2\n");
+    DataFrame *df = read_csv(TEST_CSV_FILE, false, ";");
 
     TEST_ASSERT_NOT_NULL(df);
     TEST_ASSERT_EQUAL_INT(2, df->rows);
     TEST_ASSERT_EQUAL_INT(2, df->cols);
 
-    TEST_ASSERT_EQUAL_STRING("Col 1", df->columns[0]);
-    TEST_ASSERT_EQUAL_STRING("Col 2", df->columns[1]);
+    TEST_ASSERT_EQUAL_STRING("col_1", df->columns[0]);
+    TEST_ASSERT_EQUAL_STRING("col_2", df->columns[1]);
 
     TEST_ASSERT_EQUAL_DOUBLE(10.5, df->data[0][0]);
     TEST_ASSERT_EQUAL_DOUBLE(5.0,  df->data[0][1]);
@@ -76,7 +76,7 @@ void test_LoadCsv_NoHeader(void) {
 void test_LoadCsv_FileNotFound(void) {
     remove(TEST_CSV_FILE);
 
-    DataFrame *df = read_csv(TEST_CSV_FILE, true);
+    DataFrame *df = read_csv(TEST_CSV_FILE, true, ";");
 
     TEST_ASSERT_NULL(df);
 
@@ -86,7 +86,7 @@ void test_LoadCsv_FileNotFound(void) {
 void test_LoadCsv_EmptyFile(void) {
     create_temp_csv("");
 
-    DataFrame *df = read_csv(TEST_CSV_FILE, true);
+    DataFrame *df = read_csv(TEST_CSV_FILE, true, ";");
 
     TEST_ASSERT_NULL(df);
 

@@ -27,7 +27,7 @@ static char *trim_and_unquote(char *str) {
     return str;
 }
 
-static int parse_line_to_tokens(char *line, char **tokens, const int max_cols) {
+static int parse_line_to_tokens(char *line, char **tokens, const int max_cols, const char *delim) {
     int count = 0;
     char *ptr = line;
     bool in_quotes = false;
@@ -36,7 +36,7 @@ static int parse_line_to_tokens(char *line, char **tokens, const int max_cols) {
     while (*ptr && count < max_cols) {
         if (*ptr == '"') {
             in_quotes = !in_quotes;
-        } else if (*ptr == ',' && !in_quotes) {
+        } else if (*ptr == delim[0] && !in_quotes) {
             *ptr = '\0';
             tokens[count++] = trim_and_unquote(start);
             start = ptr + 1;
@@ -85,7 +85,7 @@ void free_dataframe(DataFrame *df) {
     free(df);
 }
 
-DataFrame* read_csv(const char *path, const bool has_header) {
+DataFrame* read_csv(const char *path, const bool has_header, const char *delim) {
     FILE *file = fopen(path, "r");
 
     if (!file) return NULL;
@@ -99,7 +99,7 @@ DataFrame* read_csv(const char *path, const bool has_header) {
     bool in_q = false;
     for (const char *p = line; *p; p++) {
         if (*p == '"') in_q = !in_q;
-        if (*p == ',' && !in_q) expected_cols++;
+        if (*p == delim[0] && !in_q) expected_cols++;
     }
     expected_cols++;
 
@@ -129,7 +129,7 @@ DataFrame* read_csv(const char *path, const bool has_header) {
 
     while (fgets(line, sizeof(line), file)) {
         line[strcspn(line, "\r\n")] = 0;
-        int const actual_cols = parse_line_to_tokens(line, row_tokens, expected_cols);
+        int const actual_cols = parse_line_to_tokens(line, row_tokens, expected_cols, delim);
 
         if (actual_cols != expected_cols)
             continue;
