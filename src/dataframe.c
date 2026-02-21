@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define MAX_LINE_LENGTH 8192
 
@@ -85,14 +86,17 @@ void free_dataframe(DataFrame *df) {
     free(df);
 }
 
-DataFrame* read_csv(const char *path, const bool has_header, const char *delim) {
-    FILE *file = fopen(path, "r");
+DataframeErrorCode read_csv(const char *path, const bool has_header, const char *delim, DataFrame **out_df) {
+    if (!out_df) return DATAFRAME_ERR_ALLOCATION_FAILED;
+    *out_df = NULL;
 
-    if (!file) return NULL;
+    FILE *file = fopen(path, "r");
+    if (!file) return DATAFRAME_ERR_FILE_NOT_FOUND;
+
     char line[MAX_LINE_LENGTH];
     if (!fgets(line, sizeof(line), file)) {
         fclose(file);
-        return NULL;
+        return DATAFRAME_ERR_EMPTY_FILE;
     }
 
     int expected_cols = 0;
@@ -111,17 +115,18 @@ DataFrame* read_csv(const char *path, const bool has_header, const char *delim) 
 
     if (!has_header) data_rows_count++;
     rewind(file);
+
     DataFrame *df = create_dataframe(data_rows_count, expected_cols);
     if (!df) {
         fclose(file);
-        return NULL;
+        return DATAFRAME_ERR_ALLOCATION_FAILED;
     }
 
     char **row_tokens = malloc(expected_cols * sizeof(char *));
     if (!row_tokens) {
         free_dataframe(df);
         fclose(file);
-        return NULL;
+        return DATAFRAME_ERR_ALLOCATION_FAILED;
     }
 
     int current_r = 0;
@@ -131,8 +136,12 @@ DataFrame* read_csv(const char *path, const bool has_header, const char *delim) 
         line[strcspn(line, "\r\n")] = 0;
         int const actual_cols = parse_line_to_tokens(line, row_tokens, expected_cols, delim);
 
-        if (actual_cols != expected_cols)
-            continue;
+        if (actual_cols != expected_cols) {
+            free(row_tokens);
+            free_dataframe(df);
+            fclose(file);
+            return DATAFRAME_ERR_COLUMN_MISMATCH;
+        }
 
         if (is_first_line) {
             is_first_line = false;
@@ -153,8 +162,15 @@ DataFrame* read_csv(const char *path, const bool has_header, const char *delim) 
 
         for (int c = 0; c < expected_cols; c++) {
             char *endptr;
-            const double val = strtod(row_tokens[c], &endptr);
-            df->data[current_r][c] = row_tokens[c] == endptr ? 0.0 : val;
+            const char *token = row_tokens[c];
+            while(isspace((unsigned char)*token)) token++;
+
+            if (*token == '\0') {
+                df->data[current_r][c] = NAN;
+            } else {
+                const double val = strtod(token, &endptr);
+                df->data[current_r][c] = token == endptr ? NAN : val;
+            }
         }
         current_r++;
     }
@@ -163,7 +179,8 @@ DataFrame* read_csv(const char *path, const bool has_header, const char *delim) 
     free(row_tokens);
     fclose(file);
 
-    return df;
+    *out_df = df;
+    return DATAFRAME_SUCCESS;
 }
 
 void print_head_dataframe(const DataFrame *df, const int limit) {
@@ -180,7 +197,11 @@ void print_head_dataframe(const DataFrame *df, const int limit) {
     const int print_rows = limit < df->rows ? limit : df->rows;
     for (int r = 0; r < print_rows; r++) {
         for (int c = 0; c < df->cols; c++) {
-            printf("%-12.4f ", df->data[r][c]);
+            if ( isnan(df->data[r][c])) {
+                printf("%-12s ", "NaN");
+            } else {
+                printf("%-12.4f ", df->data[r][c]);
+            }
         }
         printf("\n");
     }

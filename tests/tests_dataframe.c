@@ -33,8 +33,11 @@ void test_CreateDataFrame(void) {
 
 void test_LoadCsv_WithHeader(void) {
     create_temp_csv("Cena;Ilosc\n10.5;5\n20.0;2\n");
-    DataFrame *df = read_csv(TEST_CSV_FILE, true, ";");
 
+    DataFrame *df = NULL;
+    const DataframeErrorCode err = read_csv(TEST_CSV_FILE, true, ";", &df);
+
+    TEST_ASSERT_EQUAL(DATAFRAME_SUCCESS, err);
     TEST_ASSERT_NOT_NULL(df);
     TEST_ASSERT_EQUAL_INT(2, df->rows);
     TEST_ASSERT_EQUAL_INT(2, df->cols);
@@ -54,8 +57,11 @@ void test_LoadCsv_WithHeader(void) {
 
 void test_LoadCsv_NoHeader(void) {
     create_temp_csv("10.5;5\n20.0;2\n");
-    DataFrame *df = read_csv(TEST_CSV_FILE, false, ";");
 
+    DataFrame *df = NULL;
+    const DataframeErrorCode err = read_csv(TEST_CSV_FILE, false, ";", &df);
+
+    TEST_ASSERT_EQUAL(DATAFRAME_SUCCESS, err);
     TEST_ASSERT_NOT_NULL(df);
     TEST_ASSERT_EQUAL_INT(2, df->rows);
     TEST_ASSERT_EQUAL_INT(2, df->cols);
@@ -76,8 +82,10 @@ void test_LoadCsv_NoHeader(void) {
 void test_LoadCsv_FileNotFound(void) {
     remove(TEST_CSV_FILE);
 
-    DataFrame *df = read_csv(TEST_CSV_FILE, true, ";");
+    DataFrame *df = NULL;
+    const DataframeErrorCode err = read_csv(TEST_CSV_FILE, true, ";", &df);
 
+    TEST_ASSERT_EQUAL(DATAFRAME_ERR_FILE_NOT_FOUND, err);
     TEST_ASSERT_NULL(df);
 
     free_dataframe(df);
@@ -86,9 +94,38 @@ void test_LoadCsv_FileNotFound(void) {
 void test_LoadCsv_EmptyFile(void) {
     create_temp_csv("");
 
-    DataFrame *df = read_csv(TEST_CSV_FILE, true, ";");
+    DataFrame *df = NULL;
+    const DataframeErrorCode err = read_csv(TEST_CSV_FILE, true, ";", &df);
 
+    TEST_ASSERT_EQUAL(DATAFRAME_ERR_EMPTY_FILE, err);
     TEST_ASSERT_NULL(df);
+
+    free_dataframe(df);
+    clean_temp_file();
+}
+
+void test_LoadCsv_ColumnMismatch(void) {
+    create_temp_csv("10.5;5\n20.0;2;1\n");
+
+    DataFrame *df = NULL;
+    const DataframeErrorCode err = read_csv(TEST_CSV_FILE, false, ";", &df);
+
+    TEST_ASSERT_EQUAL(DATAFRAME_ERR_COLUMN_MISMATCH, err);
+    TEST_ASSERT_NULL(df);
+
+    free_dataframe(df);
+    clean_temp_file();
+}
+
+void test_LoadCsv_MissingValues(void) {
+    create_temp_csv("10.5;;2\n20.0;;\n");
+
+    DataFrame *df = NULL;
+    const DataframeErrorCode err = read_csv(TEST_CSV_FILE, false, ";", &df);
+
+    TEST_ASSERT_EQUAL(DATAFRAME_SUCCESS, err);
+    TEST_ASSERT_EQUAL_DOUBLE(20.0, df->data[1][0]);
+    TEST_ASSERT_TRUE(isnan(df->data[1][1]));
 
     free_dataframe(df);
     clean_temp_file();
