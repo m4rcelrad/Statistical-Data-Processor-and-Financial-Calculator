@@ -43,6 +43,7 @@ add_executable(run_tests
         tests/tests_dataframe.c
         tests/tests_csv_reader.c
         tests/tests_statistics.c
+        tests/tests_memory_utils.c
         ${UNITY_DIR}/unity.c
 )
 
