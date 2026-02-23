@@ -16,10 +16,10 @@ typedef enum {
     STATS_ERR_INSUFFICIENT_DATA
 } StatisticsErrorCode;
 
-StatisticsErrorCode calculate_mean(const double *data, size_t length, double *out_mean);
-StatisticsErrorCode calculate_standard_deviation(const double *data, size_t length, double *out_std);
-StatisticsErrorCode calculate_sma(const double *data, size_t length, int period, double *out_sma);
-StatisticsErrorCode calculate_ema(const double *data, size_t length, int period, double *out_ema);
-StatisticsErrorCode generate_trading_signals(const double *prices, const double *sma, size_t length, const char **out_signals);
+StatisticsErrorCode calculate_mean(const double *restrict data, size_t length, double *restrict out_mean);
+StatisticsErrorCode calculate_standard_deviation(const double *restrict data, size_t length, double *restrict out_std);
+StatisticsErrorCode calculate_sma(const double *restrict data, size_t length, int period, double *restrict out_sma);
+StatisticsErrorCode calculate_ema(const double *restrict data, size_t length, int period, double *restrict out_ema);
+StatisticsErrorCode generate_trading_signals(const double *restrict prices, const double *restrict sma, size_t length, const char **restrict out_signals);
 
 #endif
