@@ -1,11 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <math.h>
 #include <stddef.h>
-#include "dataframe.h"
+#include <stdio.h>
+#include <string.h>
 #include "csv_reader.h"
+#include "dataframe.h"
+#include "memory_utils.h"
 #include "statistics.h"
+
 
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
@@ -55,9 +56,9 @@ int main(void) {
     }
 
     const size_t row_count = (size_t)df->rows;
-    double *close_prices = calloc(row_count, sizeof(double));
+    double *close_prices = (double *)aligned_calloc(row_count, sizeof(double), CACHE_LINE_SIZE);
     if (!close_prices) {
-        printf("Error: Memory allocation failed.\n");
+        printf("Error: Aligned memory allocation failed for prices.\n");
         free_dataframe(df);
         return 1;
     }
@@ -79,8 +80,9 @@ int main(void) {
         printf("Error calculating standard deviation: %d\n", stats_error_code);
     }
 
-    double *sma_values = calloc(row_count, sizeof(double));
-    const char **signals = calloc(row_count, sizeof(char*));
+    double *sma_values = (double *)aligned_calloc(row_count, sizeof(double), CACHE_LINE_SIZE);
+    const char **signals = (const char **)aligned_calloc(row_count, sizeof(char*), CACHE_LINE_SIZE);
+
 
     if (sma_values && signals) {
         const int sma_period = 3;
@@ -110,9 +112,9 @@ int main(void) {
         }
     }
 
-    if (signals) free(signals);
-    if (sma_values) free(sma_values);
-    if (close_prices) free(close_prices);
+    if (signals) aligned_free((void*)signals);
+    if (sma_values) aligned_free(sma_values);
+    if (close_prices) aligned_free(close_prices);
     free_dataframe(df);
 
     return 0;

@@ -41,6 +41,7 @@ void test_LoadCsv_WithHeader(void) {
     TEST_ASSERT_EQUAL_DOUBLE(20.0, df->data[1][0].v_num);
     TEST_ASSERT_EQUAL_DOUBLE(2.0,  df->data[1][1].v_num);
 
+    free_dataframe(df); // Fix: Memory leak prevented
 }
 
 void test_LoadCsv_NoHeader(void) {
@@ -65,6 +66,7 @@ void test_LoadCsv_NoHeader(void) {
     TEST_ASSERT_EQUAL_DOUBLE(20.0, df->data[1][0].v_num);
     TEST_ASSERT_EQUAL_DOUBLE(2.0,  df->data[1][1].v_num);
 
+    free_dataframe(df);
 }
 
 void test_LoadCsv_FileNotFound(void) {
@@ -113,6 +115,7 @@ void test_LoadCsv_MissingValues(void) {
     TEST_ASSERT_EQUAL_DOUBLE(20.0, df->data[1][0].v_num);
     TEST_ASSERT_TRUE(isnan(df->data[1][1].v_num));
 
+    free_dataframe(df);
 }
 
 void test_LoadCsv_MixedTypes(void) {
@@ -135,6 +138,7 @@ void test_LoadCsv_MixedTypes(void) {
     TEST_ASSERT_DOUBLE_WITHIN(0.001, 150.5, df->data[0][2].v_num);
     TEST_ASSERT_TRUE(isnan(df->data[1][2].v_num));
 
+    free_dataframe(df);
 }
 
 void run_csv_reader_tests(void) {

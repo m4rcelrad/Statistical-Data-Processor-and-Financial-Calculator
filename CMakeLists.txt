@@ -17,6 +17,7 @@ set(CORE_SOURCES
         src/dataframe.c
         src/csv_reader.c
         src/statistics.c
+        src/memory_utils.c
 )
 
 add_library(CoreLib STATIC ${CORE_SOURCES})

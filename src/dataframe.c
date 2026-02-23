@@ -1,38 +1,29 @@
 #include "dataframe.h"
+#include "memory_utils.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-DataFrame *create_dataframe(const int rows, const int cols) {
-    DataFrame *df = malloc(sizeof(DataFrame));
+DataFrame* create_dataframe(const size_t rows, const size_t cols) {
+    if (rows == 0 || cols == 0) return NULL;
+
+    DataFrame *df = (DataFrame *)aligned_calloc(1, sizeof(DataFrame), CACHE_LINE_SIZE);
     if (!df) return NULL;
 
-    df->rows = rows;
-    df->cols = cols;
+    df->rows = (int)rows;
+    df->cols = (int)cols;
 
-    df->columns = calloc(cols, sizeof(char *));
-    if (!df->columns) {
-        free(df);
+    df->columns = (char **)aligned_calloc(cols, sizeof(char *), CACHE_LINE_SIZE);
+    df->col_types = (DataType *)aligned_calloc(cols, sizeof(DataType), CACHE_LINE_SIZE);
+    df->data = (DataCell **)aligned_calloc(rows, sizeof(DataCell *), CACHE_LINE_SIZE);
+
+    if (!df->columns || !df->col_types || !df->data) {
+        free_dataframe(df);
         return NULL;
     }
 
-    df->col_types = calloc(cols, sizeof(DataType));
-    if (!df->col_types) {
-        free(df->columns);
-        free(df);
-        return NULL;
-    }
-
-    df->data = calloc(rows, sizeof(DataCell*));
-    if (!df->data) {
-        free(df->col_types);
-        free(df->columns);
-        free(df);
-        return NULL;
-    }
-
-    for (int i = 0; i < rows; i++) {
-        df->data[i] = calloc(cols, sizeof(DataCell));
+    for (size_t i = 0; i < rows; i++) {
+        df->data[i] = (DataCell *)aligned_calloc(cols, sizeof(DataCell), CACHE_LINE_SIZE);
         if (!df->data[i]) {
             free_dataframe(df);
             return NULL;
@@ -47,9 +38,11 @@ void free_dataframe(DataFrame *df) {
 
     if (df->columns) {
         for (int i = 0; i < df->cols; i++) {
-            free(df->columns[i]);
+            if (df->columns[i]) {
+                free(df->columns[i]);
+            }
         }
-        free(df->columns);
+        aligned_free(df->columns);
     }
 
     if (df->data && df->col_types) {
@@ -60,17 +53,17 @@ void free_dataframe(DataFrame *df) {
                         free(df->data[r][c].v_str);
                     }
                 }
-                free(df->data[r]);
+                aligned_free(df->data[r]);
             }
         }
-        free(df->data);
+        aligned_free(df->data);
     }
 
     if (df->col_types) {
-        free(df->col_types);
+        aligned_free(df->col_types);
     }
 
-    free(df);
+    aligned_free(df);
 }
 
 void print_head_dataframe(const DataFrame *df, const int limit) {

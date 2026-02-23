@@ -1,8 +1,9 @@
 #include "dataframe.h"
 #include "unity/unity.h"
+#include <stddef.h>
 
-void test_CreateDataFrame(void) {
-    DataFrame *df = create_dataframe(3, 2);
+void test_CreateDataFrame_Valid(void) {
+    DataFrame *df = create_dataframe((size_t)3, (size_t)2);
 
     TEST_ASSERT_NOT_NULL(df);
     TEST_ASSERT_EQUAL_INT(3, df->rows);
@@ -16,6 +17,15 @@ void test_CreateDataFrame(void) {
     free_dataframe(df);
 }
 
+void test_CreateDataFrame_InvalidDimensions(void) {
+    DataFrame *df1 = create_dataframe((size_t)0, (size_t)5);
+    TEST_ASSERT_NULL(df1);
+
+    DataFrame *df2 = create_dataframe((size_t)5, (size_t)0);
+    TEST_ASSERT_NULL(df2);
+}
+
 void run_dataframe_tests(void) {
-    RUN_TEST(test_CreateDataFrame);
+    RUN_TEST(test_CreateDataFrame_Valid);
+    RUN_TEST(test_CreateDataFrame_InvalidDimensions);
 }
