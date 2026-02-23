@@ -1,11 +1,9 @@
 #include "statistics.h"
 #include <math.h>
-#include <stdio.h>
-#include <string.h>
 
-static ssize_t calculate_welford_stats(const double *data, const size_t length, double *out_mean, double *out_m2) {
-    if (!data) return -1;
-    if (length == 0) return 0;
+static StatisticsErrorCode calculate_welford_stats(const double *data, const size_t length, double *out_mean, double *out_m2, size_t *out_count) {
+    if (!data) return STATS_ERR_NULL_POINTER;
+    if (length == 0) return STATS_ERR_INVALID_LENGTH;
 
     double mean = 0.0;
     double m2 = 0.0;
@@ -21,83 +19,81 @@ static ssize_t calculate_welford_stats(const double *data, const size_t length, 
         }
     }
 
-    *out_mean = count > 0 ? mean : NAN;
-    if (out_m2) *out_m2 = count > 0 ? m2 : NAN;
+    if (count == 0) return STATS_ERR_INSUFFICIENT_DATA;
 
-    return (ssize_t)count;
+    *out_mean = mean;
+    if (out_m2) *out_m2 = m2;
+    if (out_count) *out_count = count;
+
+    return STATS_SUCCESS;
 }
 
-double calculate_mean(const double *data, const size_t length) {
-    double mean;
-    if (calculate_welford_stats(data, length, &mean, NULL) <= 0) return NAN;
-    return mean;
+StatisticsErrorCode calculate_mean(const double *data, const size_t length, double *out_mean) {
+    if (!out_mean) return STATS_ERR_NULL_POINTER;
+    return calculate_welford_stats(data, length, out_mean, NULL, NULL);
 }
 
-double calculate_standard_deviation(const double *data, const size_t length) {
+StatisticsErrorCode calculate_standard_deviation(const double *data, size_t length, double *out_std) {
+    if (!out_std) return STATS_ERR_NULL_POINTER;
+
     double mean, m2;
-    const ssize_t count = calculate_welford_stats(data, length, &mean, &m2);
+    size_t count;
+    const StatisticsErrorCode err = calculate_welford_stats(data, length, &mean, &m2, &count);
 
-    if (count <= 1) return NAN;
+    if (err != STATS_SUCCESS) return err;
+    if (count <= 1) return STATS_ERR_INSUFFICIENT_DATA;
 
-    return sqrt(m2 / (double)(count - 1));
+    *out_std = sqrt(m2 / (double)(count - 1));
+    return STATS_SUCCESS;
 }
 
-void calculate_sma(const double *data, const size_t length, const int period, double *out_sma) {
-    if (!data || !out_sma || length == 0 || period <= 0 || length < (size_t)period) return;
+StatisticsErrorCode calculate_sma(const double *data, const size_t length, const int period, double *out_sma) {
+    if (!data || !out_sma) return STATS_ERR_NULL_POINTER;
+    if (length == 0) return STATS_ERR_INVALID_LENGTH;
+    if (period <= 0) return STATS_ERR_INVALID_PERIOD;
+    if (length < (size_t)period) return STATS_ERR_INSUFFICIENT_DATA;
 
     double window_sum = 0.0;
-    size_t nan_in_window = 0;
+    size_t nan_count = 0;
     const size_t u_period = (size_t)period;
 
     for (size_t i = 0; i < length; i++) {
-        if (isnan(data[i])) {
-            nan_in_window++;
-        } else {
-            window_sum += data[i];
-        }
+        if (isnan(data[i])) nan_count++;
+        else window_sum += data[i];
 
         if (i >= u_period) {
-            const double old_val = data[i - u_period];
-            if (isnan(old_val)) {
-                nan_in_window--;
-            } else {
-                window_sum -= old_val;
-            }
+            if (isnan(data[i - u_period])) nan_count--;
+            else window_sum -= data[i - u_period];
         }
 
-        if (i < u_period - 1) {
-            out_sma[i] = NAN;
-        } else {
-            out_sma[i] = nan_in_window > 0 ? NAN : window_sum / (double)period;
-        }
+        if (i < u_period - 1) out_sma[i] = NAN;
+        else out_sma[i] = (nan_count > 0) ? NAN : (window_sum / (double)period);
     }
+    return STATS_SUCCESS;
 }
 
-
-
-void calculate_ema(const double *data, const size_t length, const int period, double *out_ema) {
-    if (!data || !out_ema || length == 0 || period <= 0 || length < (size_t)period) return;
+StatisticsErrorCode calculate_ema(const double *data, const size_t length, const int period, double *out_ema) {
+    if (!data || !out_ema) return STATS_ERR_NULL_POINTER;
+    if (length == 0 || length < (size_t)period) return STATS_ERR_INVALID_LENGTH;
+    if (period <= 0) return STATS_ERR_INSUFFICIENT_DATA;
 
     const double multiplier = 2.0 / (period + 1.0);
-    const size_t u_period = (size_t)period;
-    double initial_sma_sum = 0.0;
+    double current_sum = 0.0;
 
-    for (size_t i = 0; i < u_period - 1; i++) {
-        out_ema[i] = NAN;
-    }
+    for (size_t i = 0; i < (size_t)period - 1; i++) out_ema[i] = NAN;
 
-    for (size_t i = 0; i < u_period; i++) {
+    for (size_t i = 0; i < (size_t)period; i++) {
         if (isnan(data[i])) {
             for (size_t j = 0; j < length; j++) out_ema[j] = NAN;
-            return;
+            return STATS_ERR_INSUFFICIENT_DATA;
         }
-        initial_sma_sum += data[i];
+        current_sum += data[i];
     }
 
-    double current_ema = initial_sma_sum / (double)period;
-    out_ema[u_period - 1] = current_ema;
+    double current_ema = current_sum / (double)period;
+    out_ema[period - 1] = current_ema;
 
-    for (size_t i = u_period; i < length; i++) {
+    for (size_t i = (size_t)period; i < length; i++) {
         if (isnan(data[i])) {
             out_ema[i] = NAN;
         } else {
@@ -105,27 +101,22 @@ void calculate_ema(const double *data, const size_t length, const int period, do
             out_ema[i] = current_ema;
         }
     }
+    return STATS_SUCCESS;
 }
 
-void generate_trading_signals(const double *prices, const double *sma, const size_t length, const char **out_signals) {
-    if (!prices || !sma || !out_signals || length == 0) return;
+StatisticsErrorCode generate_trading_signals(const double *prices, const double *sma, const size_t length, const char **out_signals) {
+    if (!prices || !sma || !out_signals) return STATS_ERR_NULL_POINTER;
+    if (length == 0) return STATS_ERR_INVALID_LENGTH;
 
     out_signals[0] = "HOLD";
-
     for (size_t i = 1; i < length; i++) {
         if (isnan(sma[i]) || isnan(sma[i-1]) || isnan(prices[i]) || isnan(prices[i-1])) {
             out_signals[i] = "HOLD";
             continue;
         }
-
-        if (prices[i - 1] <= sma[i - 1] && prices[i] > sma[i]) {
-            out_signals[i] = "BUY";
-        }
-        else if (prices[i - 1] >= sma[i - 1] && prices[i] < sma[i]) {
-            out_signals[i] = "SELL";
-        }
-        else {
-            out_signals[i] = "HOLD";
-        }
+        if (prices[i - 1] <= sma[i - 1] && prices[i] > sma[i]) out_signals[i] = "BUY";
+        else if (prices[i - 1] >= sma[i - 1] && prices[i] < sma[i]) out_signals[i] = "SELL";
+        else out_signals[i] = "HOLD";
     }
+    return STATS_SUCCESS;
 }

@@ -66,33 +66,47 @@ int main(void) {
         close_prices[i] = df->data[i][price_col_idx].v_num;
     }
 
-    const double m = calculate_mean(close_prices, row_count);
-    const double sigma = calculate_standard_deviation(close_prices, row_count);
+    double mean_val = 0.0;
+    double std_dev_val = 0.0;
+
+    StatisticsErrorCode stats_error_code = calculate_mean(close_prices, row_count, &mean_val);
+    if (stats_error_code != STATS_SUCCESS) {
+        printf("Error calculating mean: %d\n", stats_error_code);
+    }
+
+    stats_error_code = calculate_standard_deviation(close_prices, row_count, &std_dev_val);
+    if (stats_error_code != STATS_SUCCESS) {
+        printf("Error calculating standard deviation: %d\n", stats_error_code);
+    }
 
     double *sma_values = calloc(row_count, sizeof(double));
     const char **signals = calloc(row_count, sizeof(char*));
 
     if (sma_values && signals) {
         const int sma_period = 3;
-        calculate_sma(close_prices, row_count, sma_period, sma_values);
-        generate_trading_signals(close_prices, sma_values, row_count, signals);
 
-        printf("=== TIME SERIES ANALYSIS REPORT ===\n");
-        printf("Distribution Parameters: N(m=%.2f, sigma=%.2f)\n", m, sigma);
-        printf("----------------------------------------------------\n");
-        printf("%-12s | %-10s | %-10s | %-10s\n", "Date", "Price", "SMA(3)", "Signal");
-        printf("----------------------------------------------------\n");
+        if (calculate_sma(close_prices, row_count, sma_period, sma_values) == STATS_SUCCESS &&
+            generate_trading_signals(close_prices, sma_values, row_count, signals) == STATS_SUCCESS) {
 
-        for (size_t i = 0; i < row_count; i++) {
-            const char *date_str = (df->col_types[0] == TYPE_STRING) ? df->data[i][0].v_str : "N/A";
+            printf("=== TIME SERIES ANALYSIS REPORT ===\n");
+            printf("Distribution Parameters: N(m=%.2f, sigma=%.2f)\n", mean_val, std_dev_val);
+            printf("----------------------------------------------------\n");
+            printf("%-12s | %-10s | %-10s | %-10s\n", "Date", "Price", "SMA(3)", "Signal");
+            printf("----------------------------------------------------\n");
 
-            printf("%-12s | %-10.2f | ", date_str, close_prices[i]);
-            if (isnan(sma_values[i])) {
-                printf("%-10s | ", "NaN");
-            } else {
-                printf("%-10.2f | ", sma_values[i]);
+            for (size_t i = 0; i < row_count; i++) {
+                const char *date_str = (df->col_types[0] == TYPE_STRING) ? df->data[i][0].v_str : "N/A";
+
+                printf("%-12s | %-10.2f | ", date_str, close_prices[i]);
+                if (isnan(sma_values[i])) {
+                    printf("%-10s | ", "NaN");
+                } else {
+                    printf("%-10.2f | ", sma_values[i]);
+                }
+                printf("%-10s\n", signals[i]);
             }
-            printf("%-10s\n", signals[i]);
+        } else {
+            printf("Error: Statistics computation failed.\n");
         }
     }
 
