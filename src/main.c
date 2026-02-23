@@ -1,53 +1,30 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "loan_math.h"
-#include "loan_simulation.h"
-#include "money.h"
-#include "report.h"
+#include "dataframe.h"
+#include "csv_reader.h"
+
+// #include "loan_simulation.h"
+// #include "report.h"
 
 int main(void) {
 
-    int months = 12;
-    Rate *rates = malloc(sizeof(Rate) * months);
-    if (!rates) {
-        fprintf(stderr, "Memory allocation error for rates!\n");
-        return 1;
-    }
+    printf("Data Manager Module\n");
 
-    for(int i = 0; i < months; i++) {
-        rates[i] = create_rate(0.05);
-    }
+    const char *target_file = "report.csv";
+    printf("Attempting to load: %s\n", target_file);
 
-    MarketScenario market = {
-        .annual_rates = rates
-    };
+    DataFrame *df = NULL;
+    DataframeErrorCode status = read_csv(target_file, true, ";", &df);
 
-    LoanDefinition loan = {
-        .principal = money_from_major(100000.0),
-        .term_months = months,
-        .type = LOAN_EQUAL_INSTALLMENTS,
-    };
+    if (status == DATAFRAME_SUCCESS) {
+        printf("SUCCESS: File loaded perfectly.\n");
 
-    SimulationConfig config = {
-        .strategy = STRATEGY_REDUCE_TERM,
-        .custom_payments = NULL
-    };
+        print_head_dataframe(df, 10);
 
-    LoanSchedule result;
-    FinanceErrorCode err = run_loan_simulation(&loan, &market, &config, &result);
-
-    if (err == FINANCE_SUCCESS) {
-
-        print_schedule_to_console(&result);
-
-        save_schedule_to_csv(&result, "report.csv");
-
-        free_schedule(&result);
+        free_dataframe(df);
     } else {
-        printf("Error occurred: %s (Code: %d)\n", finance_error_string(err), err);
+        printf("ERROR: Could not load file. Code: %d\n", status);
     }
-
-    free(rates);
 
     return 0;
 }
