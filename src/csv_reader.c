@@ -1,9 +1,11 @@
-#include "csv_reader.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "csv_reader.h"
+#include "typedefs.h"
 
 static ssize_t read_line(FILE *file, char **buffer, size_t *capacity) {
     if (*buffer == NULL || *capacity == 0) {
