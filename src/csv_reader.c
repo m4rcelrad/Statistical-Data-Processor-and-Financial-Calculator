@@ -46,7 +46,8 @@ static ssize_t read_line(FILE *file, char **buffer, size_t *capacity) {
 }
 
 static char *trim_and_unquote(char *str) {
-    while (isspace((unsigned char) *str)) str++;
+    while (isspace((unsigned char) *str))
+        str++;
     if (*str == '"') {
         str++;
         char *end = str + strlen(str) - 1;
@@ -136,14 +137,14 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
         data_rows_count++;
     rewind(file);
 
-    DataFrame *df = create_dataframe(data_rows_count, expected_cols);
+    DataFrame *df = create_dataframe((size_t) data_rows_count, (size_t) expected_cols);
     if (!df) {
         free(line);
         fclose(file);
         return DATAFRAME_ERR_ALLOCATION_FAILED;
     }
 
-    char **row_tokens = malloc(expected_cols * sizeof(char *));
+    char **row_tokens = malloc((size_t) expected_cols * sizeof(char *));
     if (!row_tokens) {
         free_dataframe(df);
         free(line);
@@ -176,6 +177,7 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
 
             if (has_header) {
                 for (int c = 0; c < expected_cols; c++) {
+                    // strdup alokuje łańcuch zwykłym mallocem, co jest kompatybilne z naszym free() w free_dataframe
                     df->columns[c] = strdup(row_tokens[c]);
                 }
                 continue;
@@ -192,7 +194,8 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
             for (int c = 0; c < expected_cols; c++) {
                 char *endptr;
                 const char *token = row_tokens[c];
-                while (isspace((unsigned char)*token)) token++;
+                while (isspace((unsigned char) *token))
+                    token++;
 
                 if (*token == '\0') {
                     df->col_types[c] = TYPE_NUMERIC;
@@ -210,7 +213,8 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
 
         for (int c = 0; c < expected_cols; c++) {
             const char *token = row_tokens[c];
-            while (isspace((unsigned char)*token)) token++;
+            while (isspace((unsigned char) *token))
+                token++;
 
             if (df->col_types[c] == TYPE_STRING) {
                 df->data[current_r][c].v_str = strdup(token);

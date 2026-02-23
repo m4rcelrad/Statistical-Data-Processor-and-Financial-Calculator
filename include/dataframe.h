@@ -1,5 +1,11 @@
 #ifndef STATISTICALDATAPROCESSOR_DATAFRAME_H
 #define STATISTICALDATAPROCESSOR_DATAFRAME_H
+#include <stddef.h>
+
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
 
 typedef enum {
     DATAFRAME_SUCCESS = 0,
@@ -27,7 +33,7 @@ typedef struct {
     int cols;
 } DataFrame;
 
-DataFrame *create_dataframe(int rows, int cols);
+DataFrame* create_dataframe(size_t rows, size_t cols);
 
 void free_dataframe(DataFrame *df);
 
