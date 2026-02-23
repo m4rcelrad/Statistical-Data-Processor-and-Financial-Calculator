@@ -5,7 +5,7 @@
 
 void test_CalculateMean_ValidData(void) {
     double data[] = { 10.0, 20.0, 30.0, 40.0, 50.0 };
-    int length = sizeof(data) / sizeof(data[0]);
+    size_t length = sizeof(data) / sizeof(data[0]);
     TEST_ASSERT_EQUAL_FLOAT(30.0, calculate_mean(data, length));
 }
 
@@ -23,7 +23,7 @@ void test_CalculateMean_NullOrEmpty(void) {
 
 void test_CalculateStandardDeviation_ValidData(void) {
     double data[] = { 2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0 };
-    int length = sizeof(data) / sizeof(data[0]);
+    size_t length = sizeof(data) / sizeof(data[0]);
     TEST_ASSERT_EQUAL_FLOAT(2.13808994, calculate_standard_deviation(data, length));
 }
 
