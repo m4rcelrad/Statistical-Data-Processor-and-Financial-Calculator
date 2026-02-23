@@ -1,0 +1,10 @@
+* text=auto
+
+*.h linguist-language=C
+tests/unity/* linguist-vendored
+*.csv linguist-generated
+CMakeLists.txt linguist-vendored
+*.cmake linguist-vendored
+
+.github/ export-ignore
+.gitignore export-ignore
