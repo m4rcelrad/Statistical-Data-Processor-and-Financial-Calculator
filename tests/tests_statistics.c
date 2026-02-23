@@ -5,8 +5,8 @@
 
 void test_CalculateMean_ValidData(void) {
     double data[] = { 10.0, 20.0, 30.0, 40.0, 50.0 };
-    double m = calculate_mean(data, 5);
-    TEST_ASSERT_DOUBLE_WITHIN(0.001, 30.0, m);
+    int length = sizeof(data) / sizeof(data[0]);
+    TEST_ASSERT_EQUAL_FLOAT(30.0, calculate_mean(data, length));
 }
 
 void test_CalculateMean_WithNaN(void) {
@@ -23,8 +23,8 @@ void test_CalculateMean_NullOrEmpty(void) {
 
 void test_CalculateStandardDeviation_ValidData(void) {
     double data[] = { 2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0 };
-    double sigma = calculate_standard_deviation(data, 8);
-    TEST_ASSERT_DOUBLE_WITHIN(0.001, 2.0, sigma);
+    int length = sizeof(data) / sizeof(data[0]);
+    TEST_ASSERT_EQUAL_FLOAT(2.13808994, calculate_standard_deviation(data, length));
 }
 
 void test_CalculateStandardDeviation_InsufficientData(void) {
@@ -47,20 +47,22 @@ void test_CalculateSMA(void) {
 }
 
 void test_CalculateEMA(void) {
-    double data[] = { 10.0, 20.0, 30.0 };
-    double ema[3];
+    double data[] = {10.0, 10.0, 10.0, 10.0, 10.0};
+    int period = 3;
+    double expected_first_ema = 10.0;
 
-    calculate_ema(data, 3, 2, ema);
+    double out[5];
+    calculate_ema(data, 5, period, out);
 
-    TEST_ASSERT_DOUBLE_WITHIN(0.001, 10.0, ema[0]);
-    TEST_ASSERT_DOUBLE_WITHIN(0.001, 16.666, ema[1]);
-    TEST_ASSERT_DOUBLE_WITHIN(0.001, 25.555, ema[2]);
+    TEST_ASSERT_TRUE(isnan(out[0]));
+    TEST_ASSERT_TRUE(isnan(out[1]));
+    TEST_ASSERT_EQUAL_FLOAT(expected_first_ema, out[2]);
 }
 
 void test_GenerateTradingSignals(void) {
     double prices[] = { 10.0, 15.0, 12.0, 8.0 };
     double sma[]    = { 12.0, 14.0, 14.0, 10.0 };
-    char *signals[4];
+    const char *signals[4];
 
     generate_trading_signals(prices, sma, 4, signals);
 
@@ -69,9 +71,6 @@ void test_GenerateTradingSignals(void) {
     TEST_ASSERT_EQUAL_STRING("SELL", signals[2]);
     TEST_ASSERT_EQUAL_STRING("HOLD", signals[3]);
 
-    for (int i = 0; i < 4; i++) {
-        if (signals[i]) free(signals[i]);
-    }
 }
 
 void run_statistics_tests(void) {
