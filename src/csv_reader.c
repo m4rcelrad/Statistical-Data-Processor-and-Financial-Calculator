@@ -5,7 +5,11 @@
 #include <string.h>
 
 #include "csv_reader.h"
-#include "typedefs.h"
+
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
 
 static ssize_t read_line(FILE *file, char **buffer, size_t *capacity) {
     if (*buffer == NULL || *capacity == 0) {
@@ -42,8 +46,7 @@ static ssize_t read_line(FILE *file, char **buffer, size_t *capacity) {
 }
 
 static char *trim_and_unquote(char *str) {
-    while (isspace((unsigned char) *str))
-        str++;
+    while (isspace((unsigned char) *str)) str++;
     if (*str == '"') {
         str++;
         char *end = str + strlen(str) - 1;
@@ -150,6 +153,7 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
 
     int current_r = 0;
     bool is_first_line = true;
+    bool types_detected = false;
 
     while (read_line(file, &line, &capacity) > 0) {
         line[strcspn(line, "\r\n")] = 0;
@@ -184,21 +188,45 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
             }
         }
 
-        for (int c = 0; c < expected_cols; c++) {
-            char *endptr;
-            const char *token = row_tokens[c];
-            while (isspace((unsigned char) *token))
-                token++;
+        if (!types_detected) {
+            for (int c = 0; c < expected_cols; c++) {
+                char *endptr;
+                const char *token = row_tokens[c];
+                while (isspace((unsigned char)*token)) token++;
 
-            if (*token == '\0') {
-                df->data[current_r][c] = NAN;
+                if (*token == '\0') {
+                    df->col_types[c] = TYPE_NUMERIC;
+                } else {
+                    strtod(token, &endptr);
+                    if (token != endptr && *endptr == '\0') {
+                        df->col_types[c] = TYPE_NUMERIC;
+                    } else {
+                        df->col_types[c] = TYPE_STRING;
+                    }
+                }
+            }
+            types_detected = true;
+        }
+
+        for (int c = 0; c < expected_cols; c++) {
+            const char *token = row_tokens[c];
+            while (isspace((unsigned char)*token)) token++;
+
+            if (df->col_types[c] == TYPE_STRING) {
+                df->data[current_r][c].v_str = strdup(token);
             } else {
-                const double val = strtod(token, &endptr);
-                df->data[current_r][c] = token == endptr ? NAN : val;
+                if (*token == '\0') {
+                    df->data[current_r][c].v_num = NAN;
+                } else {
+                    char *endptr;
+                    const double val = strtod(token, &endptr);
+                    df->data[current_r][c].v_num = token == endptr ? NAN : val;
+                }
             }
         }
         current_r++;
     }
+
     df->rows = current_r;
 
     free(row_tokens);

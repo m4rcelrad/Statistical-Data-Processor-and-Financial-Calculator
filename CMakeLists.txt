@@ -39,6 +39,7 @@ add_executable(run_tests
         tests/tests_loan_math.c
         tests/tests_loan_simulation.c
         tests/tests_dataframe.c
+        tests/tests_csv_reader.c
         ${UNITY_DIR}/unity.c
 )
 

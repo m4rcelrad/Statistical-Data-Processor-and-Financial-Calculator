@@ -16,15 +16,23 @@ DataFrame *create_dataframe(const int rows, const int cols) {
         return NULL;
     }
 
-    df->data = calloc(rows, sizeof(double*));
+    df->col_types = calloc(cols, sizeof(DataType));
+    if (!df->col_types) {
+        free(df->columns);
+        free(df);
+        return NULL;
+    }
+
+    df->data = calloc(rows, sizeof(DataCell*));
     if (!df->data) {
+        free(df->col_types);
         free(df->columns);
         free(df);
         return NULL;
     }
 
     for (int i = 0; i < rows; i++) {
-        df->data[i] = calloc(cols, sizeof(double));
+        df->data[i] = calloc(cols, sizeof(DataCell));
         if (!df->data[i]) {
             free_dataframe(df);
             return NULL;
@@ -44,11 +52,22 @@ void free_dataframe(DataFrame *df) {
         free(df->columns);
     }
 
-    if (df->data) {
-        for (int i = 0; i < df->rows; i++) {
-            free(df->data[i]);
+    if (df->data && df->col_types) {
+        for (int r = 0; r < df->rows; r++) {
+            if (df->data[r]) {
+                for (int c = 0; c < df->cols; c++) {
+                    if (df->col_types[c] == TYPE_STRING && df->data[r][c].v_str) {
+                        free(df->data[r][c].v_str);
+                    }
+                }
+                free(df->data[r]);
+            }
         }
         free(df->data);
+    }
+
+    if (df->col_types) {
+        free(df->col_types);
     }
 
     free(df);
@@ -68,10 +87,14 @@ void print_head_dataframe(const DataFrame *df, const int limit) {
     const int print_rows = limit < df->rows ? limit : df->rows;
     for (int r = 0; r < print_rows; r++) {
         for (int c = 0; c < df->cols; c++) {
-            if ( isnan(df->data[r][c])) {
-                printf("%-12s ", "NaN");
+            if (df->col_types[c] == TYPE_STRING) {
+                printf("%-12s ", df->data[r][c].v_str ? df->data[r][c].v_str : "NULL");
             } else {
-                printf("%-12.4f ", df->data[r][c]);
+                if (isnan(df->data[r][c].v_num)) {
+                    printf("%-12s ", "NaN");
+                } else {
+                    printf("%-12.4f ", df->data[r][c].v_num);
+                }
             }
         }
         printf("\n");
