@@ -16,6 +16,7 @@ set(CORE_SOURCES
         src/report.c
         src/dataframe.c
         src/csv_reader.c
+        src/statistics.c
 )
 
 add_library(CoreLib STATIC ${CORE_SOURCES})
@@ -40,6 +41,7 @@ add_executable(run_tests
         tests/tests_loan_simulation.c
         tests/tests_dataframe.c
         tests/tests_csv_reader.c
+        tests/tests_statistics.c
         ${UNITY_DIR}/unity.c
 )
 
