@@ -3,6 +3,19 @@
 #include "dataframe.h"
 #include "unity/unity.h"
 
+/**
+ * @file tests_dataframe.c
+ * @brief Unit tests for the DataFrame core structure.
+ *
+ * Verifies the allocation, initialization, and safe dimension handling
+ * of the custom 2D data representation.
+ */
+
+/**
+ * @brief Tests successful creation of a valid DataFrame.
+ * Expected result: Dimensions are correctly set, all inner arrays are
+ * allocated, and memory is zero-initialized.
+ */
 void test_CreateDataFrame_Valid(void)
 {
     DataFrame *df = create_dataframe((size_t)3, (size_t)2);
@@ -19,6 +32,10 @@ void test_CreateDataFrame_Valid(void)
     free_dataframe(df);
 }
 
+/**
+ * @brief Tests the creation function with invalid dimensions (zero rows or columns).
+ * Expected result: The allocator fails safely and returns a NULL pointer.
+ */
 void test_CreateDataFrame_InvalidDimensions(void)
 {
     DataFrame *df1 = create_dataframe((size_t)0, (size_t)5);
@@ -28,6 +45,9 @@ void test_CreateDataFrame_InvalidDimensions(void)
     TEST_ASSERT_NULL(df2);
 }
 
+/**
+ * @brief Test runner for the dataframe module.
+ */
 void run_dataframe_tests(void)
 {
     RUN_TEST(test_CreateDataFrame_Valid);

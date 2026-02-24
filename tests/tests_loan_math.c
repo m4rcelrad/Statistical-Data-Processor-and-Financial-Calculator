@@ -4,12 +4,29 @@
 #include "money.h"
 #include "unity/unity.h"
 
+/**
+ * @file tests_loan_math.c
+ * @brief Unit tests for the loan mathematics module.
+ *
+ * Validates fundamental calculations, rate initializations, schedule memory
+ * management, and baseline installment payments for different loan types.
+ */
+
+/**
+ * @brief Tests the initialization of the Rate structure.
+ * Expected result: The floating-point value is correctly encapsulated within the structure.
+ */
 void test_CreateRate(void)
 {
     Rate r = create_rate(0.05);
     TEST_ASSERT_EQUAL_FLOAT(0.05, r.value);
 }
 
+/**
+ * @brief Tests the deallocation and resetting of a LoanSchedule structure.
+ * Expected result: The dynamically allocated items array is freed (pointer is NULL),
+ * and all numeric totals and counters are reset to zero.
+ */
 void test_FreeSchedule(void)
 {
     LoanSchedule schedule;
@@ -26,6 +43,11 @@ void test_FreeSchedule(void)
     TEST_ASSERT_TRUE(money_is_zero(schedule.total_paid));
 }
 
+/**
+ * @brief Tests the conversion of financial error codes to human-readable strings.
+ * Expected result: Known error codes return correct descriptions, and unknown
+ * codes safely fall back to a default error string.
+ */
 void test_FinanceErrorString(void)
 {
     TEST_ASSERT_EQUAL_STRING("Success", finance_error_string(FINANCE_SUCCESS));
@@ -34,6 +56,10 @@ void test_FinanceErrorString(void)
     TEST_ASSERT_EQUAL_STRING("Unknown error", finance_error_string((FinanceErrorCode)999));
 }
 
+/**
+ * @brief Tests the standard monthly interest calculation.
+ * Expected result: Interest is correctly computed as (balance * annual_rate / 12).
+ */
 void test_CalculateMonthlyInterest_Standard(void)
 {
     Money balance = money_from_major(120000);
@@ -42,6 +68,10 @@ void test_CalculateMonthlyInterest_Standard(void)
     TEST_ASSERT_EQUAL_INT64(50000, interest.value);
 }
 
+/**
+ * @brief Tests the interest calculation when the interest rate is strictly zero.
+ * Expected result: The calculated interest is exactly zero.
+ */
 void test_CalculateMonthlyInterest_ZeroRate(void)
 {
     Money balance = money_from_major(100000);
@@ -51,6 +81,10 @@ void test_CalculateMonthlyInterest_ZeroRate(void)
     TEST_ASSERT_TRUE(money_is_zero(interest));
 }
 
+/**
+ * @brief Tests the calculation of a baseline payment for equal installments (annuity).
+ * Expected result: The function calculates the correct fixed payment amount for a zero-interest scenario.
+ */
 void test_CalculateBaselinePayment_EqualInstallments(void)
 {
     LoanDefinition loan = {
@@ -70,6 +104,10 @@ void test_CalculateBaselinePayment_EqualInstallments(void)
     TEST_ASSERT_EQUAL_INT64(50000, payment.value);
 }
 
+/**
+ * @brief Tests the calculation of a baseline payment for decreasing installments.
+ * Expected result: The function calculates a fixed capital portion and adds the accrued interest.
+ */
 void test_CalculateBaselinePayment_DecreasingInstallments(void)
 {
     LoanDefinition loan = {.term_months = 12,
@@ -90,6 +128,9 @@ void test_CalculateBaselinePayment_DecreasingInstallments(void)
     TEST_ASSERT_EQUAL_INT64(15000, payment.value);
 }
 
+/**
+ * @brief Test runner for the loan math module.
+ */
 void run_loan_math_tests(void)
 {
     RUN_TEST(test_CreateRate);
