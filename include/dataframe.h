@@ -2,6 +2,8 @@
 #define STATISTICALDATAPROCESSOR_DATAFRAME_H
 #include <stddef.h>
 
+#include "typedefs.h"
+
 /**
  * @file dataframe.h
  * @brief Core structures and functions for representing tabular data.
@@ -10,11 +12,6 @@
  * mixed-type data (numeric and string), along with memory management and
  * visualization utilities.
  */
-
-#if defined(_MSC_VER)
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#endif
 
 /**
  * @brief Error codes related to DataFrame operations.

@@ -18,6 +18,7 @@ set(CORE_SOURCES
         src/csv_reader.c
         src/statistics.c
         src/memory_utils.c
+        include/typedefs.h
 )
 
 add_library(CoreLib STATIC ${CORE_SOURCES})

@@ -7,11 +7,7 @@
 #include "dataframe.h"
 #include "memory_utils.h"
 #include "statistics.h"
-
-#if defined(_MSC_VER)
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#endif
+#include "typedefs.h"
 
 static ssize_t find_column_index(const DataFrame *df, const char *col_name)
 {

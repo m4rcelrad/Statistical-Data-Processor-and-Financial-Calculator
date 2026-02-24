@@ -6,10 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_MSC_VER)
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#endif
+#include "typedefs.h"
 
 /**
  * @brief Reads a single line from a file into a dynamically resizing buffer.
