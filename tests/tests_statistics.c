@@ -1,10 +1,12 @@
-#include "unity/unity.h"
-#include "statistics.h"
 #include <math.h>
 #include <stdlib.h>
 
-void test_CalculateMean_ValidData(void) {
-    double data[] = { 10.0, 20.0, 30.0, 40.0, 50.0 };
+#include "statistics.h"
+#include "unity/unity.h"
+
+void test_CalculateMean_ValidData(void)
+{
+    double data[] = {10.0, 20.0, 30.0, 40.0, 50.0};
     size_t length = sizeof(data) / sizeof(data[0]);
     double mean;
 
@@ -14,8 +16,9 @@ void test_CalculateMean_ValidData(void) {
     TEST_ASSERT_EQUAL_FLOAT(30.0, mean);
 }
 
-void test_CalculateMean_WithNaN(void) {
-    double data[] = { 10.0, NAN, 30.0 };
+void test_CalculateMean_WithNaN(void)
+{
+    double data[] = {10.0, NAN, 30.0};
     double mean;
 
     StatisticsErrorCode err = calculate_mean(data, 3, &mean);
@@ -24,15 +27,17 @@ void test_CalculateMean_WithNaN(void) {
     TEST_ASSERT_DOUBLE_WITHIN(0.001, 20.0, mean);
 }
 
-void test_CalculateMean_NullOrEmpty(void) {
+void test_CalculateMean_NullOrEmpty(void)
+{
     double mean;
     TEST_ASSERT_EQUAL_INT(STATS_ERR_NULL_POINTER, calculate_mean(NULL, 5, &mean));
-    double data[] = { 10.0 };
+    double data[] = {10.0};
     TEST_ASSERT_EQUAL_INT(STATS_ERR_INVALID_LENGTH, calculate_mean(data, 0, &mean));
 }
 
-void test_CalculateStandardDeviation_ValidData(void) {
-    double data[] = { 2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0 };
+void test_CalculateStandardDeviation_ValidData(void)
+{
+    double data[] = {2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0};
     size_t length = sizeof(data) / sizeof(data[0]);
     double std_dev;
 
@@ -42,16 +47,20 @@ void test_CalculateStandardDeviation_ValidData(void) {
     TEST_ASSERT_EQUAL_FLOAT(2.13808994, std_dev);
 }
 
-void test_CalculateStandardDeviation_InsufficientData(void) {
+void test_CalculateStandardDeviation_InsufficientData(void)
+{
     double std_dev;
-    double data[] = { 10.0, NAN, NAN };
+    double data[] = {10.0, NAN, NAN};
 
-    TEST_ASSERT_EQUAL_INT(STATS_ERR_INSUFFICIENT_DATA, calculate_standard_deviation(data, 1, &std_dev));
-    TEST_ASSERT_EQUAL_INT(STATS_ERR_INSUFFICIENT_DATA, calculate_standard_deviation(data, 3, &std_dev));
+    TEST_ASSERT_EQUAL_INT(STATS_ERR_INSUFFICIENT_DATA,
+                          calculate_standard_deviation(data, 1, &std_dev));
+    TEST_ASSERT_EQUAL_INT(STATS_ERR_INSUFFICIENT_DATA,
+                          calculate_standard_deviation(data, 3, &std_dev));
 }
 
-void test_CalculateSMA(void) {
-    double data[] = { 10.0, 20.0, 30.0, 40.0, 50.0 };
+void test_CalculateSMA(void)
+{
+    double data[] = {10.0, 20.0, 30.0, 40.0, 50.0};
     double sma[5];
     size_t length = sizeof(data) / sizeof(data[0]);
 
@@ -65,7 +74,8 @@ void test_CalculateSMA(void) {
     TEST_ASSERT_DOUBLE_WITHIN(0.001, 40.0, sma[4]);
 }
 
-void test_CalculateEMA(void) {
+void test_CalculateEMA(void)
+{
     double data[] = {10.0, 10.0, 10.0, 10.0, 10.0};
     int period = 3;
     double out[5];
@@ -79,9 +89,10 @@ void test_CalculateEMA(void) {
     TEST_ASSERT_EQUAL_FLOAT(10.0, out[2]);
 }
 
-void test_GenerateTradingSignals(void) {
-    double prices[] = { 10.0, 15.0, 12.0, 8.0 };
-    double sma[]    = { 12.0, 14.0, 14.0, 10.0 };
+void test_GenerateTradingSignals(void)
+{
+    double prices[] = {10.0, 15.0, 12.0, 8.0};
+    double sma[] = {12.0, 14.0, 14.0, 10.0};
     const char *signals[4];
     size_t length = sizeof(prices) / sizeof(prices[0]);
 
@@ -94,8 +105,9 @@ void test_GenerateTradingSignals(void) {
     TEST_ASSERT_EQUAL_STRING("HOLD", signals[3]);
 }
 
-void test_CalculateSMA_Negative(void) {
-    double data[] = { 10.0, 20.0 };
+void test_CalculateSMA_Negative(void)
+{
+    double data[] = {10.0, 20.0};
     double sma[2];
 
     TEST_ASSERT_EQUAL_INT(STATS_ERR_INSUFFICIENT_DATA, calculate_sma(data, 2, 3, sma));
@@ -103,18 +115,20 @@ void test_CalculateSMA_Negative(void) {
     TEST_ASSERT_EQUAL_INT(STATS_ERR_INVALID_LENGTH, calculate_sma(data, 0, 3, sma));
 }
 
-void test_CalculateEMA_Negative(void) {
-    double data[] = { 10.0, 20.0 };
+void test_CalculateEMA_Negative(void)
+{
+    double data[] = {10.0, 20.0};
     double ema[2];
 
     TEST_ASSERT_EQUAL_INT(STATS_ERR_INSUFFICIENT_DATA, calculate_ema(data, 2, 3, ema));
 
-    double data_with_nan[] = { 10.0, NAN, 30.0 };
+    double data_with_nan[] = {10.0, NAN, 30.0};
     double ema_nan[3];
     TEST_ASSERT_EQUAL_INT(STATS_ERR_INSUFFICIENT_DATA, calculate_ema(data_with_nan, 3, 3, ema_nan));
 }
 
-void run_statistics_tests(void) {
+void run_statistics_tests(void)
+{
     RUN_TEST(test_CalculateMean_ValidData);
     RUN_TEST(test_CalculateMean_WithNaN);
     RUN_TEST(test_CalculateMean_NullOrEmpty);

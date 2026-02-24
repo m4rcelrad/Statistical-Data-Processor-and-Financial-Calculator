@@ -1,29 +1,39 @@
 #include "report.h"
-#include "money.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
-static void fprint_money(FILE *stream, const Money amount) {
+#include "money.h"
+
+static void fprint_money(FILE *stream, const Money amount)
+{
     const long long major = amount.value / CURRENCY_SCALE;
     const long long minor = llabs(amount.value % CURRENCY_SCALE);
     fprintf(stream, "%lld.%02lld", major, minor);
 }
 
-static void format_money_str(char *buffer, const Money amount) {
+static void format_money_str(char *buffer, const Money amount)
+{
     const long long major = amount.value / CURRENCY_SCALE;
     const long long minor = llabs(amount.value % CURRENCY_SCALE);
     sprintf(buffer, "%lld.%02lld", major, minor);
 }
 
-void print_report_header(void) {
+void print_report_header(void)
+{
     printf("\nLoan Schedule:\n");
     printf("-------------------------------------------------------------------\n");
     printf("| %3s | %12s | %12s | %12s | %12s |\n",
-           "No.", "Principal", "Interest", "Payment", "Balance");
+           "No.",
+           "Principal",
+           "Interest",
+           "Payment",
+           "Balance");
     printf("-------------------------------------------------------------------\n");
 }
 
-void print_report_row(const int month_idx, const Installment *inst) {
+void print_report_row(const int month_idx, const Installment *inst)
+{
     char buf[64];
     printf("| %3d | ", month_idx + 1);
 
@@ -40,7 +50,8 @@ void print_report_row(const int month_idx, const Installment *inst) {
     printf("%12s |\n", buf);
 }
 
-void print_report_summary(const Money total_interest, const Money total_paid) {
+void print_report_summary(const Money total_interest, const Money total_paid)
+{
     char buf[64];
     printf("-------------------------------------------------------------------\n");
 
@@ -56,8 +67,10 @@ void print_report_summary(const Money total_interest, const Money total_paid) {
     printf("-------------------------------------------------------------------\n");
 }
 
-void print_schedule_to_console(const LoanSchedule *schedule) {
-    if (!schedule) return;
+void print_schedule_to_console(const LoanSchedule *schedule)
+{
+    if (!schedule)
+        return;
 
     print_report_header();
 
@@ -68,7 +81,8 @@ void print_schedule_to_console(const LoanSchedule *schedule) {
     print_report_summary(schedule->total_interest, schedule->total_paid);
 }
 
-int save_schedule_to_csv(const LoanSchedule *schedule, const char *filename) {
+int save_schedule_to_csv(const LoanSchedule *schedule, const char *filename)
+{
     if (!schedule || !schedule->items)
         return -1;
 

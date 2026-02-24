@@ -7,10 +7,15 @@ extern void run_dataframe_tests(void);
 extern void run_statistics_tests(void);
 extern void run_memory_utils_tests(void);
 
-void setUp(void) {}
-void tearDown(void) {}
+void setUp(void)
+{
+}
+void tearDown(void)
+{
+}
 
-int main(void) {
+int main(void)
+{
     UNITY_BEGIN();
 
     run_money_tests();

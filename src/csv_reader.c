@@ -1,17 +1,18 @@
+#include "csv_reader.h"
+
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "csv_reader.h"
-
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 #endif
 
-static ssize_t read_line(FILE *file, char **buffer, size_t *capacity) {
+static ssize_t read_line(FILE *file, char **buffer, size_t *capacity)
+{
     if (*buffer == NULL || *capacity == 0) {
         *capacity = 256;
         *buffer = malloc(*capacity);
@@ -32,7 +33,7 @@ static ssize_t read_line(FILE *file, char **buffer, size_t *capacity) {
             *capacity = new_cap;
         }
 
-        (*buffer)[length++] = (char) c;
+        (*buffer)[length++] = (char)c;
 
         if (c == '\n')
             break;
@@ -42,22 +43,23 @@ static ssize_t read_line(FILE *file, char **buffer, size_t *capacity) {
         return -1;
 
     (*buffer)[length] = '\0';
-    return (ssize_t) length;
+    return (ssize_t)length;
 }
 
-static char *trim_and_unquote(char *str) {
-    while (isspace((unsigned char) *str))
+static char *trim_and_unquote(char *str)
+{
+    while (isspace((unsigned char)*str))
         str++;
     if (*str == '"') {
         str++;
         char *end = str + strlen(str) - 1;
-        while (end > str && (isspace((unsigned char) *end) || *end == '"')) {
+        while (end > str && (isspace((unsigned char)*end) || *end == '"')) {
             *end = '\0';
             end--;
         }
     } else {
         char *end = str + strlen(str) - 1;
-        while (end > str && isspace((unsigned char) *end)) {
+        while (end > str && isspace((unsigned char)*end)) {
             *end = '\0';
             end--;
         }
@@ -66,7 +68,8 @@ static char *trim_and_unquote(char *str) {
     return str;
 }
 
-static int parse_line_to_tokens(char *line, char **tokens, const int max_cols, const char *delim) {
+static int parse_line_to_tokens(char *line, char **tokens, const int max_cols, const char *delim)
+{
     int count = 0;
     char *ptr = line;
     bool in_quotes = false;
@@ -96,7 +99,9 @@ static int parse_line_to_tokens(char *line, char **tokens, const int max_cols, c
     return count;
 }
 
-DataframeErrorCode read_csv(const char *path, const bool has_header, const char *delim, DataFrame **out_df) {
+DataframeErrorCode
+read_csv(const char *path, const bool has_header, const char *delim, DataFrame **out_df)
+{
     if (!out_df)
         return DATAFRAME_ERR_ALLOCATION_FAILED;
     *out_df = NULL;
@@ -137,14 +142,14 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
         data_rows_count++;
     rewind(file);
 
-    DataFrame *df = create_dataframe((size_t) data_rows_count, (size_t) expected_cols);
+    DataFrame *df = create_dataframe((size_t)data_rows_count, (size_t)expected_cols);
     if (!df) {
         free(line);
         fclose(file);
         return DATAFRAME_ERR_ALLOCATION_FAILED;
     }
 
-    char **row_tokens = malloc((size_t) expected_cols * sizeof(char *));
+    char **row_tokens = malloc((size_t)expected_cols * sizeof(char *));
     if (!row_tokens) {
         free_dataframe(df);
         free(line);
@@ -177,7 +182,8 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
 
             if (has_header) {
                 for (int c = 0; c < expected_cols; c++) {
-                    // strdup alokuje łańcuch zwykłym mallocem, co jest kompatybilne z naszym free() w free_dataframe
+                    // strdup alokuje łańcuch zwykłym mallocem, co jest kompatybilne z naszym free()
+                    // w free_dataframe
                     df->columns[c] = strdup(row_tokens[c]);
                 }
                 continue;
@@ -194,7 +200,7 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
             for (int c = 0; c < expected_cols; c++) {
                 char *endptr;
                 const char *token = row_tokens[c];
-                while (isspace((unsigned char) *token))
+                while (isspace((unsigned char)*token))
                     token++;
 
                 if (*token == '\0') {
@@ -213,7 +219,7 @@ DataframeErrorCode read_csv(const char *path, const bool has_header, const char 
 
         for (int c = 0; c < expected_cols; c++) {
             const char *token = row_tokens[c];
-            while (isspace((unsigned char) *token))
+            while (isspace((unsigned char)*token))
                 token++;
 
             if (df->col_types[c] == TYPE_STRING) {

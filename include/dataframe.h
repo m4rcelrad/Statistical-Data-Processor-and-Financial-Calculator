@@ -15,10 +15,7 @@ typedef enum {
     DATAFRAME_ERR_COLUMN_MISMATCH
 } DataframeErrorCode;
 
-typedef enum {
-    TYPE_NUMERIC,
-    TYPE_STRING
-} DataType;
+typedef enum { TYPE_NUMERIC, TYPE_STRING } DataType;
 
 typedef union {
     double v_num;
@@ -33,10 +30,10 @@ typedef struct {
     int cols;
 } DataFrame;
 
-DataFrame* create_dataframe(size_t rows, size_t cols);
+DataFrame *create_dataframe(size_t rows, size_t cols);
 
 void free_dataframe(DataFrame *df);
 
 void print_head_dataframe(const DataFrame *df, int limit);
 
-#endif //STATISTICALDATAPROCESSOR_DATAFRAME_H
+#endif // STATISTICALDATAPROCESSOR_DATAFRAME_H

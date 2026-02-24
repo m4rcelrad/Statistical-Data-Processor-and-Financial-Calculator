@@ -1,13 +1,15 @@
-#include "unity/unity.h"
-#include "dataframe.h"
-#include "csv_reader.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "csv_reader.h"
+#include "dataframe.h"
+#include "unity/unity.h"
+
 #define TEST_CSV_FILE "test_data.tmp.csv"
 
-static void create_temp_csv(const char *content) {
+static void create_temp_csv(const char *content)
+{
     FILE *f = fopen(TEST_CSV_FILE, "w");
     if (f) {
         fputs(content, f);
@@ -15,11 +17,13 @@ static void create_temp_csv(const char *content) {
     }
 }
 
-static void clean_temp_file(void) {
+static void clean_temp_file(void)
+{
     remove(TEST_CSV_FILE);
 }
 
-void test_LoadCsv_WithHeader(void) {
+void test_LoadCsv_WithHeader(void)
+{
     create_temp_csv("Cena;Ilosc\n10.5;5\n20.0;2\n");
 
     DataFrame *df = NULL;
@@ -36,15 +40,16 @@ void test_LoadCsv_WithHeader(void) {
     TEST_ASSERT_EQUAL_STRING("Ilosc", df->columns[1]);
 
     TEST_ASSERT_EQUAL_DOUBLE(10.5, df->data[0][0].v_num);
-    TEST_ASSERT_EQUAL_DOUBLE(5.0,  df->data[0][1].v_num);
+    TEST_ASSERT_EQUAL_DOUBLE(5.0, df->data[0][1].v_num);
 
     TEST_ASSERT_EQUAL_DOUBLE(20.0, df->data[1][0].v_num);
-    TEST_ASSERT_EQUAL_DOUBLE(2.0,  df->data[1][1].v_num);
+    TEST_ASSERT_EQUAL_DOUBLE(2.0, df->data[1][1].v_num);
 
     free_dataframe(df); // Fix: Memory leak prevented
 }
 
-void test_LoadCsv_NoHeader(void) {
+void test_LoadCsv_NoHeader(void)
+{
     create_temp_csv("10.5;5\n20.0;2\n");
 
     DataFrame *df = NULL;
@@ -61,15 +66,16 @@ void test_LoadCsv_NoHeader(void) {
     TEST_ASSERT_EQUAL_STRING("col_2", df->columns[1]);
 
     TEST_ASSERT_EQUAL_DOUBLE(10.5, df->data[0][0].v_num);
-    TEST_ASSERT_EQUAL_DOUBLE(5.0,  df->data[0][1].v_num);
+    TEST_ASSERT_EQUAL_DOUBLE(5.0, df->data[0][1].v_num);
 
     TEST_ASSERT_EQUAL_DOUBLE(20.0, df->data[1][0].v_num);
-    TEST_ASSERT_EQUAL_DOUBLE(2.0,  df->data[1][1].v_num);
+    TEST_ASSERT_EQUAL_DOUBLE(2.0, df->data[1][1].v_num);
 
     free_dataframe(df);
 }
 
-void test_LoadCsv_FileNotFound(void) {
+void test_LoadCsv_FileNotFound(void)
+{
     remove(TEST_CSV_FILE);
 
     DataFrame *df = NULL;
@@ -79,7 +85,8 @@ void test_LoadCsv_FileNotFound(void) {
     TEST_ASSERT_NULL(df);
 }
 
-void test_LoadCsv_EmptyFile(void) {
+void test_LoadCsv_EmptyFile(void)
+{
     create_temp_csv("");
 
     DataFrame *df = NULL;
@@ -91,7 +98,8 @@ void test_LoadCsv_EmptyFile(void) {
     TEST_ASSERT_NULL(df);
 }
 
-void test_LoadCsv_ColumnMismatch(void) {
+void test_LoadCsv_ColumnMismatch(void)
+{
     create_temp_csv("10.5;5\n20.0;2;1\n");
 
     DataFrame *df = NULL;
@@ -103,7 +111,8 @@ void test_LoadCsv_ColumnMismatch(void) {
     TEST_ASSERT_NULL(df);
 }
 
-void test_LoadCsv_MissingValues(void) {
+void test_LoadCsv_MissingValues(void)
+{
     create_temp_csv("10.5;;2\n20.0;;\n");
 
     DataFrame *df = NULL;
@@ -118,7 +127,8 @@ void test_LoadCsv_MissingValues(void) {
     free_dataframe(df);
 }
 
-void test_LoadCsv_MixedTypes(void) {
+void test_LoadCsv_MixedTypes(void)
+{
     create_temp_csv("Date;Ticker;Price\n2023-01-01;AAPL;150.5\n2023-01-02;MSFT;\n");
 
     DataFrame *df = NULL;
@@ -141,7 +151,8 @@ void test_LoadCsv_MixedTypes(void) {
     free_dataframe(df);
 }
 
-void run_csv_reader_tests(void) {
+void run_csv_reader_tests(void)
+{
     RUN_TEST(test_LoadCsv_WithHeader);
     RUN_TEST(test_LoadCsv_NoHeader);
     RUN_TEST(test_LoadCsv_FileNotFound);

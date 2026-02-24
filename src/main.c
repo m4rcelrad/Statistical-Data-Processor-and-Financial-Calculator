@@ -2,19 +2,21 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "csv_reader.h"
 #include "dataframe.h"
 #include "memory_utils.h"
 #include "statistics.h"
-
 
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 #endif
 
-static ssize_t find_column_index(const DataFrame *df, const char *col_name) {
-    if (!df || !col_name) return -1;
+static ssize_t find_column_index(const DataFrame *df, const char *col_name)
+{
+    if (!df || !col_name)
+        return -1;
     for (size_t i = 0; i < (size_t)df->cols; i++) {
         if (df->columns[i] && strcmp(df->columns[i], col_name) == 0) {
             return (ssize_t)i;
@@ -23,7 +25,8 @@ static ssize_t find_column_index(const DataFrame *df, const char *col_name) {
     return -1;
 }
 
-int main(void) {
+int main(void)
+{
     const char *filepath = "market_data.csv";
 
     FILE *file = fopen(filepath, "w");
@@ -81,15 +84,15 @@ int main(void) {
     }
 
     double *sma_values = (double *)aligned_calloc(row_count, sizeof(double), CACHE_LINE_SIZE);
-    const char **signals = (const char **)aligned_calloc(row_count, sizeof(char*), CACHE_LINE_SIZE);
-
+    const char **signals =
+        (const char **)aligned_calloc(row_count, sizeof(char *), CACHE_LINE_SIZE);
 
     if (sma_values && signals) {
         const int sma_period = 3;
 
         if (calculate_sma(close_prices, row_count, sma_period, sma_values) == STATS_SUCCESS &&
-            generate_trading_signals(close_prices, sma_values, row_count, signals) == STATS_SUCCESS) {
-
+            generate_trading_signals(close_prices, sma_values, row_count, signals) ==
+                STATS_SUCCESS) {
             printf("=== TIME SERIES ANALYSIS REPORT ===\n");
             printf("Distribution Parameters: N(m=%.2f, sigma=%.2f)\n", mean_val, std_dev_val);
             printf("----------------------------------------------------\n");
@@ -97,7 +100,8 @@ int main(void) {
             printf("----------------------------------------------------\n");
 
             for (size_t i = 0; i < row_count; i++) {
-                const char *date_str = (df->col_types[0] == TYPE_STRING) ? df->data[i][0].v_str : "N/A";
+                const char *date_str =
+                    (df->col_types[0] == TYPE_STRING) ? df->data[i][0].v_str : "N/A";
 
                 printf("%-12s | %-10.2f | ", date_str, close_prices[i]);
                 if (isnan(sma_values[i])) {
@@ -112,9 +116,12 @@ int main(void) {
         }
     }
 
-    if (signals) aligned_free((void*)signals);
-    if (sma_values) aligned_free(sma_values);
-    if (close_prices) aligned_free(close_prices);
+    if (signals)
+        aligned_free((void *)signals);
+    if (sma_values)
+        aligned_free(sma_values);
+    if (close_prices)
+        aligned_free(close_prices);
     free_dataframe(df);
 
     return 0;

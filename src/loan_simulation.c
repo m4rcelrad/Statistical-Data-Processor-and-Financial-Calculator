@@ -1,15 +1,18 @@
 #include "loan_simulation.h"
-#include "loan_math.h"
-#include "money.h"
+
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+
+#include "loan_math.h"
+#include "money.h"
 
 #define MAX_LOAN_MONTHS 1200
 
 static FinanceErrorCode validate_inputs(const LoanDefinition *loan,
                                         const MarketScenario *market,
-                                        LoanSchedule *out_schedule) {
+                                        LoanSchedule *out_schedule)
+{
     if (!out_schedule || !loan)
         return FINANCE_ERR_INVALID_ARGUMENT;
 
@@ -28,7 +31,8 @@ static FinanceErrorCode validate_inputs(const LoanDefinition *loan,
     return FINANCE_SUCCESS;
 }
 
-static FinanceErrorCode validate_config(const SimulationConfig *config) {
+static FinanceErrorCode validate_config(const SimulationConfig *config)
+{
     if (!config)
         return FINANCE_ERR_INVALID_ARGUMENT;
 
@@ -42,7 +46,8 @@ static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
                                                  const SimulationState *state,
                                                  const Money required_payment,
                                                  const Money interest,
-                                                 Money *out_final_payment) {
+                                                 Money *out_final_payment)
+{
     const Money custom_amount =
         config->custom_payments ? config->custom_payments[state->current_month] : MONEY_ZERO;
 
@@ -73,7 +78,8 @@ static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
 }
 
 static FinanceErrorCode
-append_result(LoanSchedule *schedule, const int max_capacity, const Installment *installment) {
+append_result(LoanSchedule *schedule, const int max_capacity, const Installment *installment)
+{
     if (schedule->count >= max_capacity) {
         return FINANCE_ERR_NUMERIC_OVERFLOW;
     }
@@ -82,7 +88,8 @@ append_result(LoanSchedule *schedule, const int max_capacity, const Installment 
     return FINANCE_SUCCESS;
 }
 
-static FinanceErrorCode update_totals(LoanSchedule *schedule, const Installment *installment) {
+static FinanceErrorCode update_totals(LoanSchedule *schedule, const Installment *installment)
+{
     if (schedule->total_interest.value > LLONG_MAX - installment->interest.value)
         return FINANCE_ERR_NUMERIC_OVERFLOW;
     if (schedule->total_paid.value > LLONG_MAX - installment->payment.value)
@@ -94,13 +101,15 @@ static FinanceErrorCode update_totals(LoanSchedule *schedule, const Installment 
     return FINANCE_SUCCESS;
 }
 
-void loan_simulation_init(SimulationState *state, Money principal) {
+void loan_simulation_init(SimulationState *state, Money principal)
+{
     state->current_balance = principal;
     state->last_total_payment = MONEY_ZERO;
     state->current_month = 0;
 }
 
-bool loan_simulation_is_complete(const LoanDefinition *loan, const SimulationState *state) {
+bool loan_simulation_is_complete(const LoanDefinition *loan, const SimulationState *state)
+{
     if (!loan || !state)
         return true;
 
@@ -117,7 +126,8 @@ FinanceErrorCode loan_simulation_step(const LoanDefinition *loan,
                                       const MarketScenario *market,
                                       const SimulationConfig *config,
                                       SimulationState *state,
-                                      Installment *out_installment) {
+                                      Installment *out_installment)
+{
     if (!loan || !market || !config || !state || !out_installment)
         return FINANCE_ERR_INVALID_ARGUMENT;
 
@@ -172,7 +182,8 @@ FinanceErrorCode loan_simulation_step(const LoanDefinition *loan,
 FinanceErrorCode run_loan_simulation(const LoanDefinition *loan,
                                      const MarketScenario *market,
                                      const SimulationConfig *config,
-                                     LoanSchedule *out_result) {
+                                     LoanSchedule *out_result)
+{
     FinanceErrorCode err = validate_inputs(loan, market, out_result);
     if (err != FINANCE_SUCCESS)
         return err;

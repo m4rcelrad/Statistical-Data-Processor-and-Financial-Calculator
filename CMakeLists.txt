@@ -5,9 +5,9 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
+if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
+endif ()
 
 set(CORE_SOURCES
         src/money.c
@@ -24,9 +24,9 @@ add_library(CoreLib STATIC ${CORE_SOURCES})
 
 target_include_directories(CoreLib PUBLIC include)
 
-if(NOT MSVC)
+if (NOT MSVC)
     target_link_libraries(CoreLib PUBLIC m)
-endif()
+endif ()
 
 add_executable(StatisticalDataProcessor src/main.c)
 target_link_libraries(StatisticalDataProcessor PRIVATE CoreLib)

@@ -1,0 +1,108 @@
+Language: C
+Standard: Auto
+
+# === INDENTATION & SPACING ===
+IndentWidth: 4
+UseTab: Never
+TabWidth: 4
+ContinuationIndentWidth: 4
+
+# === LINE LENGTH & WRAPPING ===
+ColumnLimit: 100
+
+# === BRACE STYLE ===
+BreakBeforeBraces: Linux
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+
+# === SPACING AROUND OPERATORS & KEYWORDS ===
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# === FUNCTION DECLARATIONS ===
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# === PARAMETER FORMATTING ===
+BinPackArguments: false
+BinPackParameters: false
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+
+# === POINTER AND REFERENCE STYLE ===
+PointerAlignment: Right
+
+# === COMMENT ALIGNMENT ===
+AlignTrailingComments: true
+ReflowComments: Never
+CommentPragmas: '^ NOLINT'
+
+# === INCLUDES ===
+SortIncludes: CaseSensitive
+IncludeCategories:
+  # System C standard library
+  - Regex: '^<(stdio|stdlib|string|math|time|ctype|assert|errno|limits|stddef|stdint|stdbool|stdarg|signal|setjmp|stdatomic|threads|complex|fenv|inttypes|iso646|locale|wchar|wctype)\.h>'
+    Priority: 1
+    SortPriority: 1
+
+  # System/POSIX headers
+  - Regex: '^<(sys|unistd|fcntl|dirent|pwd|grp)/'
+    Priority: 2
+    SortPriority: 2
+
+  # Third-party libraries
+  - Regex: '^<.*>'
+    Priority: 3
+    SortPriority: 3
+
+  # Local project headers
+  - Regex: '.*'
+    Priority: 4
+    SortPriority: 4
+
+IncludeBlocks: Regroup
+
+# === MISCELLANEOUS ===
+AccessModifierOffset: -4
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+DerivePointerAlignment: false
+DisableFormat: false
+FixNamespaceComments: true
+IndentCaseLabels: false
+IndentPPDirectives: None
+IndentWrappedFunctionNames: false
+InsertNewlineAtEOF: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 300
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000000
+RemoveBracesLLVM: false
+SortUsingDeclarations: false

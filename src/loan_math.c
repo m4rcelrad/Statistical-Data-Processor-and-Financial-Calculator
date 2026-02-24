@@ -1,16 +1,20 @@
 #include "loan_math.h"
-#include "money.h"
+
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 
-Rate create_rate(const long double value) {
+#include "money.h"
+
+Rate create_rate(const long double value)
+{
     Rate r;
     r.value = value;
     return r;
 }
 
-void free_schedule(LoanSchedule *schedule) {
+void free_schedule(LoanSchedule *schedule)
+{
     if (schedule->items) {
         free(schedule->items);
         schedule->items = NULL;
@@ -21,7 +25,8 @@ void free_schedule(LoanSchedule *schedule) {
     schedule->total_paid = MONEY_ZERO;
 }
 
-const char *finance_error_string(const FinanceErrorCode code) {
+const char *finance_error_string(const FinanceErrorCode code)
+{
     switch (code) {
     case FINANCE_SUCCESS:
         return "Success";
@@ -46,7 +51,8 @@ const char *finance_error_string(const FinanceErrorCode code) {
     }
 }
 
-Money calculate_monthly_interest(const Money balance, const Rate current_rate) {
+Money calculate_monthly_interest(const Money balance, const Rate current_rate)
+{
     if (current_rate.value == 0.0L)
         return MONEY_ZERO;
     const long double factor = current_rate.value / 12.0L;
@@ -56,7 +62,8 @@ Money calculate_monthly_interest(const Money balance, const Rate current_rate) {
 static FinanceErrorCode calculate_annuity_pmt(const Money balance,
                                               const long double monthly_rate,
                                               const int remaining_months,
-                                              Money *out_pmt) {
+                                              Money *out_pmt)
+{
     *out_pmt = MONEY_ZERO;
     if (money_lte(balance, MONEY_ZERO))
         return FINANCE_SUCCESS;
@@ -96,16 +103,15 @@ FinanceErrorCode calculate_baseline_payment(const LoanDefinition *loan,
                                             const MarketScenario *market,
                                             const SimulationState *state,
                                             const Money interest,
-                                            Money *out_payment) {
+                                            Money *out_payment)
+{
     const int remaining_months = loan->term_months - state->current_month;
     const Rate current_rate = market->annual_rates[state->current_month];
     const long double monthly_rate = current_rate.value / 12.0L;
 
     if (loan->type == LOAN_EQUAL_INSTALLMENTS) {
-        const FinanceErrorCode err = calculate_annuity_pmt(state->current_balance,
-                                                           monthly_rate,
-                                                           remaining_months,
-                                                           out_payment);
+        const FinanceErrorCode err = calculate_annuity_pmt(
+            state->current_balance, monthly_rate, remaining_months, out_payment);
         if (err != FINANCE_SUCCESS)
             return err;
 

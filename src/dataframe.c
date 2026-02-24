@@ -1,14 +1,19 @@
 #include "dataframe.h"
-#include "memory_utils.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-DataFrame* create_dataframe(const size_t rows, const size_t cols) {
-    if (rows == 0 || cols == 0) return NULL;
+#include "memory_utils.h"
+
+DataFrame *create_dataframe(const size_t rows, const size_t cols)
+{
+    if (rows == 0 || cols == 0)
+        return NULL;
 
     DataFrame *df = (DataFrame *)aligned_calloc(1, sizeof(DataFrame), CACHE_LINE_SIZE);
-    if (!df) return NULL;
+    if (!df)
+        return NULL;
 
     df->rows = (int)rows;
     df->cols = (int)cols;
@@ -33,8 +38,10 @@ DataFrame* create_dataframe(const size_t rows, const size_t cols) {
     return df;
 }
 
-void free_dataframe(DataFrame *df) {
-    if (!df) return;
+void free_dataframe(DataFrame *df)
+{
+    if (!df)
+        return;
 
     if (df->columns) {
         for (int i = 0; i < df->cols; i++) {
@@ -66,8 +73,10 @@ void free_dataframe(DataFrame *df) {
     aligned_free(df);
 }
 
-void print_head_dataframe(const DataFrame *df, const int limit) {
-    if (!df) return;
+void print_head_dataframe(const DataFrame *df, const int limit)
+{
+    if (!df)
+        return;
 
     printf("\nData Preview (Top %d):\n", limit);
     printf("-------------------------------------------------------------------\n");

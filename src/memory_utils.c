@@ -1,16 +1,19 @@
 #include "memory_utils.h"
+
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
 #if defined(_MSC_VER)
 #include <malloc.h>
 #endif
 
-void* aligned_calloc(const size_t num, const size_t size, size_t alignment) {
-    if (num == 0 || size == 0) return NULL;
+void *aligned_calloc(const size_t num, const size_t size, size_t alignment)
+{
+    if (num == 0 || size == 0)
+        return NULL;
 
-    if (alignment < sizeof(void*) || (alignment & (alignment - 1)) != 0) {
+    if (alignment < sizeof(void *) || (alignment & (alignment - 1)) != 0) {
         return NULL;
     }
 
@@ -45,12 +48,14 @@ void* aligned_calloc(const size_t num, const size_t size, size_t alignment) {
     if (ptr) {
         memset(ptr, 0, total_size);
     }
-    
+
     return ptr;
 }
 
-void aligned_free(void *ptr) {
-    if (!ptr) return;
+void aligned_free(void *ptr)
+{
+    if (!ptr)
+        return;
 
 #if defined(_MSC_VER)
     _aligned_free(ptr);
