@@ -11,6 +11,13 @@
 typedef SSIZE_T ssize_t;
 #endif
 
+/**
+ * @brief Reads a single line from a file into a dynamically resizing buffer.
+ * * @param file The file pointer to read from.
+ * @param buffer Pointer to the character buffer pointer. Will be allocated/reallocated as needed.
+ * @param capacity Pointer to the size variable tracking the current buffer capacity.
+ * @return The number of characters read (excluding null terminator), or -1 if EOF or error.
+ */
 static ssize_t read_line(FILE *file, char **buffer, size_t *capacity)
 {
     if (*buffer == NULL || *capacity == 0) {
@@ -46,6 +53,11 @@ static ssize_t read_line(FILE *file, char **buffer, size_t *capacity)
     return (ssize_t)length;
 }
 
+/**
+ * @brief Removes leading and trailing whitespace, as well as surrounding quotes from a string.
+ * * @param str The null-terminated string to be trimmed in-place.
+ * @return A pointer to the first non-whitespace, non-quote character of the string.
+ */
 static char *trim_and_unquote(char *str)
 {
     while (isspace((unsigned char)*str))
@@ -68,6 +80,17 @@ static char *trim_and_unquote(char *str)
     return str;
 }
 
+/**
+ * @brief Parses a single CSV line into an array of tokens.
+ * * Safely handles quoted sections containing the delimiter. It modifies the
+ * input line in-place by inserting null terminators.
+ *
+ * @param line The raw line string read from the CSV.
+ * @param tokens Array of character pointers where the resulting tokens will be stored.
+ * @param max_cols The maximum number of expected columns to prevent buffer overflow.
+ * @param delim The delimiter character used to separate fields.
+ * @return The actual number of parsed tokens (columns).
+ */
 static int parse_line_to_tokens(char *line, char **tokens, const int max_cols, const char *delim)
 {
     int count = 0;
@@ -182,8 +205,7 @@ read_csv(const char *path, const bool has_header, const char *delim, DataFrame *
 
             if (has_header) {
                 for (int c = 0; c < expected_cols; c++) {
-                    // strdup alokuje łańcuch zwykłym mallocem, co jest kompatybilne z naszym free()
-                    // w free_dataframe
+                    // strdup alokuje łańcuch zwykłym mallocem, co jest kompatybilne z naszym free() w free_dataframe
                     df->columns[c] = strdup(row_tokens[c]);
                 }
                 continue;

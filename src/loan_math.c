@@ -6,6 +6,11 @@
 
 #include "money.h"
 
+/**
+ * @brief Creates a Rate structure from a given floating-point value.
+ * @param value The interest rate as a decimal (e.g., 0.05 for 5%).
+ * @return A Rate structure containing the provided value.
+ */
 Rate create_rate(const long double value)
 {
     Rate r;
@@ -13,6 +18,10 @@ Rate create_rate(const long double value)
     return r;
 }
 
+/**
+ * @brief Safely deallocates the items array within a LoanSchedule and resets its totals.
+ * @param schedule Pointer to the LoanSchedule to be freed.
+ */
 void free_schedule(LoanSchedule *schedule)
 {
     if (schedule->items) {
@@ -25,6 +34,11 @@ void free_schedule(LoanSchedule *schedule)
     schedule->total_paid = MONEY_ZERO;
 }
 
+/**
+ * @brief Returns a string representation of a FinanceErrorCode.
+ * @param code The error code to translate.
+ * @return A pointer to a constant character array containing the description.
+ */
 const char *finance_error_string(const FinanceErrorCode code)
 {
     switch (code) {
@@ -51,6 +65,14 @@ const char *finance_error_string(const FinanceErrorCode code)
     }
 }
 
+/**
+ * @brief Computes the accrued interest for a single month.
+ * * Divides the annual rate by 12 to get the monthly rate, then multiplies
+ * it by the current balance.
+ * * @param balance The outstanding loan balance.
+ * @param current_rate The annual interest rate.
+ * @return The interest amount for the current month.
+ */
 Money calculate_monthly_interest(const Money balance, const Rate current_rate)
 {
     if (current_rate.value == 0.0L)
@@ -59,6 +81,15 @@ Money calculate_monthly_interest(const Money balance, const Rate current_rate)
     return money_mul(balance, factor);
 }
 
+/**
+ * @brief Calculates the fixed annuity payment for equal installments.
+ * * Uses the standard annuity formula: P = Balance * (r * (1 + r)^n) / ((1 + r)^n - 1)
+ * * @param balance The current outstanding balance.
+ * @param monthly_rate The interest rate per month.
+ * @param remaining_months The number of months left to pay.
+ * @param out_pmt Pointer to store the resulting payment amount.
+ * @return FINANCE_SUCCESS on success, or an overflow/invalid rate error code.
+ */
 static FinanceErrorCode calculate_annuity_pmt(const Money balance,
                                               const long double monthly_rate,
                                               const int remaining_months,
@@ -99,6 +130,18 @@ static FinanceErrorCode calculate_annuity_pmt(const Money balance,
     return FINANCE_SUCCESS;
 }
 
+/**
+ * @brief Determines the required baseline payment based on the loan type.
+ * * For LOAN_EQUAL_INSTALLMENTS, it calculates the annuity payment.
+ * For LOAN_DECREASING_INSTALLMENTS, it calculates the fixed capital part
+ * and adds the current month's interest.
+ * * @param loan Pointer to the loan definition.
+ * @param market Pointer to the market scenario containing interest rates.
+ * @param state Pointer to the current simulation state.
+ * @param interest The calculated interest for the current month.
+ * @param out_payment Pointer to store the final baseline payment.
+ * @return FINANCE_SUCCESS on success, or an appropriate error code.
+ */
 FinanceErrorCode calculate_baseline_payment(const LoanDefinition *loan,
                                             const MarketScenario *market,
                                             const SimulationState *state,
@@ -115,6 +158,7 @@ FinanceErrorCode calculate_baseline_payment(const LoanDefinition *loan,
         if (err != FINANCE_SUCCESS)
             return err;
 
+        /* Ensure payment covers at least the interest (prevent negative amortization edge cases) */
         if (money_lt(*out_payment, interest) && remaining_months > 1) {
             const Money one_unit = {1};
             *out_payment = money_add(interest, one_unit);

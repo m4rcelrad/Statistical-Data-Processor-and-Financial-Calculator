@@ -7,8 +7,17 @@
 #include "loan_math.h"
 #include "money.h"
 
+/** * @brief Maximum allowed duration of a loan in months (100 years).
+ */
 #define MAX_LOAN_MONTHS 1200
 
+/**
+ * @brief Validates the primary inputs before starting the simulation.
+ * @param loan Pointer to the loan definition.
+ * @param market Pointer to the market scenario.
+ * @param out_schedule Pointer to the output schedule.
+ * @return FINANCE_SUCCESS if inputs are valid, or an error code describing the issue.
+ */
 static FinanceErrorCode validate_inputs(const LoanDefinition *loan,
                                         const MarketScenario *market,
                                         LoanSchedule *out_schedule)
@@ -31,6 +40,11 @@ static FinanceErrorCode validate_inputs(const LoanDefinition *loan,
     return FINANCE_SUCCESS;
 }
 
+/**
+ * @brief Validates the simulation configuration.
+ * @param config Pointer to the simulation config.
+ * @return FINANCE_SUCCESS if valid, or FINANCE_ERR_INVALID_ARGUMENT otherwise.
+ */
 static FinanceErrorCode validate_config(const SimulationConfig *config)
 {
     if (!config)
@@ -42,6 +56,18 @@ static FinanceErrorCode validate_config(const SimulationConfig *config)
     return FINANCE_SUCCESS;
 }
 
+/**
+ * @brief Determines the actual payment amount for the current month.
+ * * Takes into account custom overpayments or the selected strategy (reducing term
+ * vs. reducing installments) to decide the final amount to be paid.
+ *
+ * @param config Pointer to the simulation config.
+ * @param state Pointer to the active simulation state.
+ * @param required_payment The calculated baseline payment.
+ * @param interest Accrued interest for the month.
+ * @param out_final_payment Pointer to store the finalized payment amount.
+ * @return FINANCE_SUCCESS or an error code on invalid overpayment scenarios.
+ */
 static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
                                                  const SimulationState *state,
                                                  const Money required_payment,
@@ -77,6 +103,13 @@ static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
     return FINANCE_SUCCESS;
 }
 
+/**
+ * @brief Appends a single installment record into the output schedule.
+ * @param schedule Pointer to the schedule holding the results.
+ * @param max_capacity Maximum number of items the schedule can hold.
+ * @param installment Pointer to the installment to append.
+ * @return FINANCE_SUCCESS on success, or an overflow error if capacity is exceeded.
+ */
 static FinanceErrorCode
 append_result(LoanSchedule *schedule, const int max_capacity, const Installment *installment)
 {
@@ -88,6 +121,12 @@ append_result(LoanSchedule *schedule, const int max_capacity, const Installment 
     return FINANCE_SUCCESS;
 }
 
+/**
+ * @brief Updates the global totals (interest and paid amount) in the schedule.
+ * @param schedule Pointer to the schedule to update.
+ * @param installment Pointer to the latest processed installment.
+ * @return FINANCE_SUCCESS on success, or an overflow error if values exceed the limit.
+ */
 static FinanceErrorCode update_totals(LoanSchedule *schedule, const Installment *installment)
 {
     if (schedule->total_interest.value > LLONG_MAX - installment->interest.value)

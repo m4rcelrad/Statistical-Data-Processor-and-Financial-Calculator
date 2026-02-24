@@ -5,6 +5,11 @@
 
 #include "money.h"
 
+/**
+ * @brief Formats and directly writes a monetary value to a file stream.
+ * @param stream The output file stream (e.g., stdout or a file pointer).
+ * @param amount The internal Money structure to format.
+ */
 static void fprint_money(FILE *stream, const Money amount)
 {
     const long long major = amount.value / CURRENCY_SCALE;
@@ -12,6 +17,11 @@ static void fprint_money(FILE *stream, const Money amount)
     fprintf(stream, "%lld.%02lld", major, minor);
 }
 
+/**
+ * @brief Formats a monetary value as a string and stores it in a buffer.
+ * @param buffer The character array to store the formatted output.
+ * @param amount The internal Money structure to format.
+ */
 static void format_money_str(char *buffer, const Money amount)
 {
     const long long major = amount.value / CURRENCY_SCALE;

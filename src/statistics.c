@@ -2,6 +2,17 @@
 
 #include <math.h>
 
+/**
+ * @brief Internal helper using Welford's online algorithm for computing variance.
+ * Welford's algorithm calculates the mean (m) and the sum of squared differences
+ * in a single pass, which is numerically stable and avoids catastrophic cancellation.
+ * * @param data Array of input values.
+ * @param length Number of elements in the array.
+ * @param out_mean Pointer to store the calculated mean.
+ * @param out_m2 Pointer to store the sum of squared differences from the mean (can be NULL).
+ * @param out_count Pointer to store the number of valid non-NaN elements processed (can be NULL).
+ * @return STATS_SUCCESS or a relevant error code.
+ */
 static StatisticsErrorCode calculate_welford_stats(const double *restrict data,
                                                    size_t length,
                                                    double *restrict out_mean,

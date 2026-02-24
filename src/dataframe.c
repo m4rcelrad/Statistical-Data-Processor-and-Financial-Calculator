@@ -11,6 +11,7 @@ DataFrame *create_dataframe(const size_t rows, const size_t cols)
     if (rows == 0 || cols == 0)
         return NULL;
 
+    /* Allocate the main DataFrame structure with cache line alignment */
     DataFrame *df = (DataFrame *)aligned_calloc(1, sizeof(DataFrame), CACHE_LINE_SIZE);
     if (!df)
         return NULL;
@@ -18,6 +19,7 @@ DataFrame *create_dataframe(const size_t rows, const size_t cols)
     df->rows = (int)rows;
     df->cols = (int)cols;
 
+    /* Allocate arrays for column names, data types, and row pointers */
     df->columns = (char **)aligned_calloc(cols, sizeof(char *), CACHE_LINE_SIZE);
     df->col_types = (DataType *)aligned_calloc(cols, sizeof(DataType), CACHE_LINE_SIZE);
     df->data = (DataCell **)aligned_calloc(rows, sizeof(DataCell *), CACHE_LINE_SIZE);
@@ -27,6 +29,7 @@ DataFrame *create_dataframe(const size_t rows, const size_t cols)
         return NULL;
     }
 
+    /* Allocate each row's cell array */
     for (size_t i = 0; i < rows; i++) {
         df->data[i] = (DataCell *)aligned_calloc(cols, sizeof(DataCell), CACHE_LINE_SIZE);
         if (!df->data[i]) {
@@ -43,21 +46,23 @@ void free_dataframe(DataFrame *df)
     if (!df)
         return;
 
+    /* Free column names */
     if (df->columns) {
         for (int i = 0; i < df->cols; i++) {
             if (df->columns[i]) {
-                free(df->columns[i]);
+                free(df->columns[i]); /* Allocated via strdup, so standard free is used */
             }
         }
         aligned_free(df->columns);
     }
 
+    /* Free cell contents and row arrays */
     if (df->data && df->col_types) {
         for (int r = 0; r < df->rows; r++) {
             if (df->data[r]) {
                 for (int c = 0; c < df->cols; c++) {
                     if (df->col_types[c] == TYPE_STRING && df->data[r][c].v_str) {
-                        free(df->data[r][c].v_str);
+                        free(df->data[r][c].v_str); /* Dynamically allocated strings */
                     }
                 }
                 aligned_free(df->data[r]);

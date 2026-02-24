@@ -1,4 +1,4 @@
-#include "../include/money.h"
+#include "money.h"
 
 #include <math.h>
 
@@ -7,6 +7,7 @@ const Money MONEY_ZERO = {0};
 Money money_from_major(const long double major_amount)
 {
     Money result;
+    /* Uses llroundl to ensure correct rounding to the nearest integer instead of truncation */
     result.value = llroundl(major_amount * CURRENCY_SCALE);
     return result;
 }
@@ -33,6 +34,7 @@ Money money_sub(const Money a, const Money b)
 Money money_mul(const Money base, const long double factor)
 {
     Money result;
+    /* Rounds the product to avoid fractional minor units loss */
     result.value = llroundl(base.value * factor);
     return result;
 }
@@ -40,6 +42,7 @@ Money money_mul(const Money base, const long double factor)
 Money money_div(const Money base, const int divisor)
 {
     Money result = {0};
+    /* Protects against division by zero */
     if (divisor != 0) {
         result.value = base.value / divisor;
     }
