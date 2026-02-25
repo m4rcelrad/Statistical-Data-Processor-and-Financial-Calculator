@@ -1,4 +1,5 @@
 #include "input_utils.h"
+#include "typedefs.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -112,5 +113,37 @@ bool read_double_secure(const char *prompt, double *out_value)
 
         *out_value = parsed_value;
         return true;
+    }
+}
+
+bool read_string_secure(const char *prompt, char *buffer, const size_t size)
+{
+    if (!buffer || size == 0) {
+        return false;
+    }
+
+    while (true) {
+        if (prompt) {
+            printf("%s", prompt);
+            fflush(stdout);
+        }
+
+        if (!fgets(buffer, (int)size, stdin)) {
+            return false;
+        }
+
+        if (strchr(buffer, '\n') == NULL) {
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF)
+                ;
+        } else {
+            buffer[strcspn(buffer, "\r\n")] = 0;
+        }
+
+        if (buffer[0] != '\0') {
+            return true;
+        }
+
+        printf("Error: Input cannot be empty. Please try again.\n");
     }
 }
