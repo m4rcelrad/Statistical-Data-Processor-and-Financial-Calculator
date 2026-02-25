@@ -7,10 +7,9 @@
  * @file statistics.h
  * @brief Module for performing statistical and time-series analysis.
  *
- * Provides functions for basic descriptive statistics (mean, standard deviation),
- * moving averages (SMA, EMA), and trading signal generation. For calculations
- * dealing with the normal distribution, the standard notation N(m, 𝜎) is assumed,
- * where m is the mean and 𝜎 is the standard deviation.
+ * Provides functions for basic descriptive statistics, moving averages (SMA, EMA),
+ * and trading signal generation. For calculations dealing with the normal distribution,
+ * the standard notation N(m, 𝜎) is assumed, where m is the mean and 𝜎 is the standard deviation.
  */
 
 #if defined(_MSC_VER)
@@ -30,25 +29,24 @@ typedef enum {
 } StatisticsErrorCode;
 
 /**
- * @brief Calculates the arithmetic mean (m) of an array of values.
- * @param data Array of double-precision input values.
- * @param length The number of elements in the data array.
- * @param out_mean Pointer where the calculated mean (m) will be stored.
- * @return STATS_SUCCESS on success, or an error code.
+ * @brief Descriptive statistics representing the normal distribution N(m, 𝜎).
  */
-StatisticsErrorCode
-calculate_mean(const double *restrict data, size_t length, double *restrict out_mean);
+typedef struct {
+    double mean;               /*!< The calculated mean (m) */
+    double standard_deviation; /*!< The calculated standard deviation (𝜎) */
+    double variance;           /*!< The calculated sample variance (𝜎^2) */
+} SeriesStatistics;
 
 /**
- * @brief Calculates the sample standard deviation (𝜎) of an array of values.
- * These two parameters together describe the normal distribution N(m, 𝜎).
+ * @brief Calculates the core descriptive statistics (m, 𝜎, and variance) in a single pass.
  * @param data Array of double-precision input values.
  * @param length The number of elements in the data array.
- * @param out_std Pointer where the calculated standard deviation (𝜎) will be stored.
- * @return STATS_SUCCESS on success, or an error code (e.g., if length <= 1).
+ * @param out_stats Pointer where the calculated SeriesStatistics will be stored.
+ * @return STATS_SUCCESS on success, or an error code.
  */
-StatisticsErrorCode
-calculate_standard_deviation(const double *restrict data, size_t length, double *restrict out_std);
+StatisticsErrorCode calculate_series_statistics(const double *restrict data,
+                                                size_t length,
+                                                SeriesStatistics *restrict out_stats);
 
 /**
  * @brief Calculates the Simple Moving Average (SMA) over a given period.

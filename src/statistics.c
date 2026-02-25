@@ -6,7 +6,7 @@
  * @brief Internal helper using Welford's online algorithm for computing variance.
  * Welford's algorithm calculates the mean (m) and the sum of squared differences
  * in a single pass, which is numerically stable and avoids catastrophic cancellation.
- * * @param data Array of input values.
+ * @param data Array of input values.
  * @param length Number of elements in the array.
  * @param out_mean Pointer to store the calculated mean.
  * @param out_m2 Pointer to store the sum of squared differences from the mean (can be NULL).
@@ -14,7 +14,7 @@
  * @return STATS_SUCCESS or a relevant error code.
  */
 static StatisticsErrorCode calculate_welford_stats(const double *restrict data,
-                                                   size_t length,
+                                                   const size_t length,
                                                    double *restrict out_mean,
                                                    double *restrict out_m2,
                                                    size_t *restrict out_count)
@@ -50,35 +50,37 @@ static StatisticsErrorCode calculate_welford_stats(const double *restrict data,
     return STATS_SUCCESS;
 }
 
-StatisticsErrorCode
-calculate_mean(const double *restrict data, const size_t length, double *restrict out_mean)
+StatisticsErrorCode calculate_series_statistics(const double *restrict data,
+                                                const size_t length,
+                                                SeriesStatistics *restrict out_stats)
 {
-    if (!out_mean)
-        return STATS_ERR_NULL_POINTER;
-    return calculate_welford_stats(data, length, out_mean, NULL, NULL);
-}
-
-StatisticsErrorCode
-calculate_standard_deviation(const double *restrict data, size_t length, double *restrict out_std)
-{
-    if (!out_std)
+    if (!out_stats)
         return STATS_ERR_NULL_POINTER;
 
-    double mean, m2;
+    double m, m2;
     size_t count;
-    const StatisticsErrorCode err = calculate_welford_stats(data, length, &mean, &m2, &count);
 
+    const StatisticsErrorCode err = calculate_welford_stats(data, length, &m, &m2, &count);
     if (err != STATS_SUCCESS)
         return err;
-    if (count <= 1)
-        return STATS_ERR_INSUFFICIENT_DATA;
 
-    *out_std = sqrt(m2 / (double)(count - 1));
+    out_stats->mean = m;
+
+    if (count > 1) {
+        out_stats->variance = m2 / (double)(count - 1);
+        out_stats->standard_deviation = sqrt(out_stats->variance);
+    } else {
+        out_stats->variance = NAN;
+        out_stats->standard_deviation = NAN;
+    }
+
     return STATS_SUCCESS;
 }
 
-StatisticsErrorCode
-calculate_sma(const double *restrict data, size_t length, int period, double *restrict out_sma)
+StatisticsErrorCode calculate_sma(const double *restrict data,
+                                  const size_t length,
+                                  const int period,
+                                  double *restrict out_sma)
 {
     if (!data || !out_sma)
         return STATS_ERR_NULL_POINTER;
@@ -109,13 +111,15 @@ calculate_sma(const double *restrict data, size_t length, int period, double *re
         if (i < u_period - 1)
             out_sma[i] = NAN;
         else
-            out_sma[i] = (nan_count > 0) ? NAN : (window_sum / (double)period);
+            out_sma[i] = nan_count > 0 ? NAN : window_sum / (double)period;
     }
     return STATS_SUCCESS;
 }
 
-StatisticsErrorCode
-calculate_ema(const double *restrict data, size_t length, int period, double *restrict out_ema)
+StatisticsErrorCode calculate_ema(const double *restrict data,
+                                  const size_t length,
+                                  const int period,
+                                  double *restrict out_ema)
 {
     if (!data || !out_ema)
         return STATS_ERR_NULL_POINTER;

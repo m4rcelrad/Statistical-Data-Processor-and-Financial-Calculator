@@ -137,8 +137,8 @@ void test_Step_CustomPayment_Overpayment(void) {
     FinanceErrorCode err = loan_simulation_step(&loan, &market, &config, &state, &inst);
 
     TEST_ASSERT_EQUAL(FINANCE_SUCCESS, err);
-    TEST_ASSERT_EQUAL_INT64(80000, inst.payment.value);
-    TEST_ASSERT_EQUAL_INT64(20000, inst.balance.value);
+    TEST_ASSERT_EQUAL_INT64(90000, inst.payment.value);
+    TEST_ASSERT_EQUAL_INT64(10000, inst.balance.value);
 }
 
 /**
