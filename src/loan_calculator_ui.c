@@ -15,6 +15,11 @@
 #include "memory_utils.h"
 #include "report.h"
 
+/**
+ * @brief Prints the expected CSV format instructions to standard output.
+ * * Provides the user with a visual guide on how to structure their CSV
+ * file for automated loan parameter loading.
+ */
 static void print_csv_format_help(void)
 {
     printf("\n--- EXPECTED CSV FORMAT ---\n");
@@ -30,7 +35,14 @@ static void print_csv_format_help(void)
     printf("---------------------------\n\n");
 }
 
-static void apply_custom_payment_schedule(const char *filepath, const int term_months, Money *payments)
+/**
+ * @brief Applies an irregular custom payment schedule from a CSV file to the payments array.
+ * * @param filepath The path to the CSV file containing the irregular payment schedule.
+ * @param term_months The total term of the loan in months.
+ * @param payments Pointer to the array of custom payments to be updated.
+ */
+static void
+apply_custom_payment_schedule(const char *filepath, const int term_months, Money *payments)
 {
     if (!payments || term_months <= 0) {
         return;
@@ -40,7 +52,9 @@ static void apply_custom_payment_schedule(const char *filepath, const int term_m
     const DataframeErrorCode err = read_csv(filepath, true, ",", &df);
 
     if (err != DATAFRAME_SUCCESS || !df) {
-        printf("Warning: Could not load custom payment schedule from %s. Proceeding with standard payments.\n", filepath);
+        printf("Warning: Could not load custom payment schedule from %s. Proceeding with standard "
+               "payments.\n",
+               filepath);
         if (df) {
             free_dataframe(df);
         }
@@ -71,6 +85,15 @@ static void apply_custom_payment_schedule(const char *filepath, const int term_m
     printf("Successfully applied custom payment schedule from %s\n", filepath);
 }
 
+/**
+ * @brief Orchestrates the loan simulation process using the provided parameters.
+ * * Generates the rates array, initializes the simulation configuration, runs the
+ * schedule, prints the results, and optionally exports the output to a CSV file.
+ * * @param loan The core loan definition structure.
+ * @param base_rate The annual interest rate applied to the entire loan term.
+ * @param strategy The selected overpayment strategy (reduce term or installment).
+ * @param custom_payments Pointer to an array of custom overpayments for each month.
+ */
 static void execute_simulation(const LoanDefinition loan,
                                const double base_rate,
                                const OverpaymentStrategy strategy,
@@ -100,10 +123,14 @@ static void execute_simulation(const LoanDefinition loan,
         print_schedule_to_console(&schedule);
 
         int save_choice = 0;
-        if (read_integer_secure("\nWould you like to export the schedule to CSV? (1 for Yes, 0 for No): ", &save_choice)) {
+        if (read_integer_secure(
+                "\nWould you like to export the schedule to CSV? (1 for Yes, 0 for No): ",
+                &save_choice)) {
             if (save_choice == 1) {
                 char filename[256];
-                if (read_string_secure("Enter destination filename (e.g., report.csv): ", filename, sizeof(filename))) {
+                if (read_string_secure("Enter destination filename (e.g., report.csv): ",
+                                       filename,
+                                       sizeof(filename))) {
                     save_schedule_to_csv(&schedule, filename);
                 }
             }
@@ -116,6 +143,9 @@ static void execute_simulation(const LoanDefinition loan,
     aligned_free(rates);
 }
 
+/**
+ * @brief Prompts the user for manual entry of all loan parameters and initiates the simulation.
+ */
 static void process_manual_entry(void)
 {
     double principal_major, base_rate, extra_payment_major;
@@ -129,16 +159,19 @@ static void process_manual_entry(void)
     if (!read_integer_secure("Term (in months): ", &term))
         return;
 
-    if (!read_integer_secure("Loan Type (0 = Equal Installments, 1 = Decreasing Installments): ", &type_input))
+    if (!read_integer_secure("Loan Type (0 = Equal Installments, 1 = Decreasing Installments): ",
+                             &type_input))
         return;
 
     if (!read_double_secure("Annual Interest Rate (e.g. 0.05 for 5%%): ", &base_rate))
         return;
 
-    if (!read_integer_secure("Overpayment Strategy (0 = Reduce Term, 1 = Reduce Installment): ", &strategy_input))
+    if (!read_integer_secure("Overpayment Strategy (0 = Reduce Term, 1 = Reduce Installment): ",
+                             &strategy_input))
         return;
 
-    if (!read_double_secure("Fixed Custom Overpayment Per Month (0 if none): ", &extra_payment_major))
+    if (!read_double_secure("Fixed Custom Overpayment Per Month (0 if none): ",
+                            &extra_payment_major))
         return;
 
     LoanDefinition loan;
@@ -146,7 +179,8 @@ static void process_manual_entry(void)
     loan.term_months = term;
     loan.type = type_input == 0 ? LOAN_EQUAL_INSTALLMENTS : LOAN_DECREASING_INSTALLMENTS;
 
-    const OverpaymentStrategy strategy = strategy_input == 0 ? STRATEGY_REDUCE_TERM : STRATEGY_REDUCE_INSTALLMENT;
+    const OverpaymentStrategy strategy =
+        strategy_input == 0 ? STRATEGY_REDUCE_TERM : STRATEGY_REDUCE_INSTALLMENT;
 
     Money *custom_payments = aligned_calloc((size_t)term, sizeof(Money), CACHE_LINE_SIZE);
     if (custom_payments) {
@@ -158,10 +192,13 @@ static void process_manual_entry(void)
         }
 
         int load_custom = 0;
-        if (read_integer_secure("\nWould you like to load an irregular overpayment schedule CSV? (1 for Yes, 0 for No): ", &load_custom)) {
+        if (read_integer_secure("\nWould you like to load an irregular overpayment schedule CSV? "
+                                "(1 for Yes, 0 for No): ",
+                                &load_custom)) {
             if (load_custom == 1) {
                 char schedule_path[256];
-                if (read_string_secure("Enter path to the schedule CSV: ", schedule_path, sizeof(schedule_path))) {
+                if (read_string_secure(
+                        "Enter path to the schedule CSV: ", schedule_path, sizeof(schedule_path))) {
                     apply_custom_payment_schedule(schedule_path, term, custom_payments);
                 }
             }
@@ -175,6 +212,9 @@ static void process_manual_entry(void)
     }
 }
 
+/**
+ * @brief Reads loan parameters from a user-specified CSV file and initiates the simulation.
+ */
 static void process_csv_entry(void)
 {
     print_csv_format_help();
@@ -220,7 +260,8 @@ static void process_csv_entry(void)
     const int strategy_input = (int)strategy_double;
 
     if (principal_major <= 0.0 || term <= 0 || base_rate < 0.0 || extra_payment_major < 0.0) {
-        printf("Error: CSV contains out-of-bounds mathematical values (e.g., negative principal).\n");
+        printf(
+            "Error: CSV contains out-of-bounds mathematical values (e.g., negative principal).\n");
         free_dataframe(df);
         return;
     }
@@ -242,7 +283,8 @@ static void process_csv_entry(void)
     loan.term_months = term;
     loan.type = type_input == 0 ? LOAN_EQUAL_INSTALLMENTS : LOAN_DECREASING_INSTALLMENTS;
 
-    const OverpaymentStrategy strategy = strategy_input == 0 ? STRATEGY_REDUCE_TERM : STRATEGY_REDUCE_INSTALLMENT;
+    const OverpaymentStrategy strategy =
+        strategy_input == 0 ? STRATEGY_REDUCE_TERM : STRATEGY_REDUCE_INSTALLMENT;
 
     printf("\nCSV loaded successfully. Preparing simulation...\n");
 
@@ -256,10 +298,13 @@ static void process_csv_entry(void)
         }
 
         int load_custom = 0;
-        if (read_integer_secure("\nWould you like to load an irregular overpayment schedule CSV? (1 for Yes, 0 for No): ", &load_custom)) {
+        if (read_integer_secure("\nWould you like to load an irregular overpayment schedule CSV? "
+                                "(1 for Yes, 0 for No): ",
+                                &load_custom)) {
             if (load_custom == 1) {
                 char schedule_path[256];
-                if (read_string_secure("Enter path to the schedule CSV: ", schedule_path, sizeof(schedule_path))) {
+                if (read_string_secure(
+                        "Enter path to the schedule CSV: ", schedule_path, sizeof(schedule_path))) {
                     apply_custom_payment_schedule(schedule_path, term, custom_payments);
                 }
             }

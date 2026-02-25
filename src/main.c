@@ -3,6 +3,19 @@
 #include "input_utils.h"
 #include "loan_calculator_ui.h"
 
+/**
+ * @file main.c
+ * @brief Central entry point for the Statistical Data Processor and Financial Calculator.
+ *
+ * This application provides an interactive menu allowing the user to select
+ * between time series analysis and complex financial calculations.
+ */
+
+/**
+ * @brief Generates mock CSV files containing sample data for demonstration purposes.
+ * * Automatically creates dummy configuration files on disk to help the user test
+ * the CSV import features of the application.
+ */
 void generate_mock_files(void)
 {
     printf("\n--- GENERATING MOCK FILES ---\n");
@@ -44,6 +57,12 @@ void generate_mock_files(void)
     printf("-----------------------------\n\n");
 }
 
+/**
+ * @brief The main execution block and primary application menu.
+ * * Displays the main menu, parses the user's choices safely, and acts as a router
+ * switching contexts between different functional sub-systems.
+ * * @return 0 upon successful execution and normal application termination.
+ */
 int main(void)
 {
     int menu_choice;
