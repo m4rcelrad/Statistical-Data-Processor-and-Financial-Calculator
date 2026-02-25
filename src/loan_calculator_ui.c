@@ -1,12 +1,11 @@
 #include "loan_calculator_ui.h"
-#include "typedefs.h"
 
 #include <ctype.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #include "csv_reader.h"
 #include "dataframe.h"
@@ -31,10 +30,51 @@ static void print_csv_format_help(void)
     printf("---------------------------\n\n");
 }
 
+static void apply_custom_payment_schedule(const char *filepath, const int term_months, Money *payments)
+{
+    if (!payments || term_months <= 0) {
+        return;
+    }
+
+    DataFrame *df = NULL;
+    const DataframeErrorCode err = read_csv(filepath, true, ",", &df);
+
+    if (err != DATAFRAME_SUCCESS || !df) {
+        printf("Warning: Could not load custom payment schedule from %s. Proceeding with standard payments.\n", filepath);
+        if (df) {
+            free_dataframe(df);
+        }
+        return;
+    }
+
+    if (df->rows < 1 || df->cols < 2) {
+        printf("Error: Payment schedule CSV must have at least two columns (Month, Amount).\n");
+        free_dataframe(df);
+        return;
+    }
+
+    for (int i = 0; i < df->rows; i++) {
+        const double month_val = df->data[i][0].v_num;
+        const double amount_val = df->data[i][1].v_num;
+
+        if (!isnan(month_val) && !isnan(amount_val)) {
+            const int month_idx = (int)month_val - 1;
+
+            if (month_idx >= 0 && month_idx < term_months && amount_val > 0.0) {
+                const Money schedule_extra = money_from_major(amount_val);
+                payments[month_idx] = money_add(payments[month_idx], schedule_extra);
+            }
+        }
+    }
+
+    free_dataframe(df);
+    printf("Successfully applied custom payment schedule from %s\n", filepath);
+}
+
 static void execute_simulation(const LoanDefinition loan,
                                const double base_rate,
                                const OverpaymentStrategy strategy,
-                               const double extra_payment_major)
+                               const Money *custom_payments)
 {
     Rate *rates = aligned_calloc((size_t)loan.term_months, sizeof(Rate), CACHE_LINE_SIZE);
     if (!rates) {
@@ -51,40 +91,19 @@ static void execute_simulation(const LoanDefinition loan,
 
     SimulationConfig config;
     config.strategy = strategy;
-    Money *custom_payments = NULL;
-
-    if (extra_payment_major > 0.0) {
-        custom_payments = aligned_calloc((size_t)loan.term_months, sizeof(Money), CACHE_LINE_SIZE);
-        if (!custom_payments) {
-            printf("Error: Could not allocate memory for custom payments.\n");
-            aligned_free(rates);
-            return;
-        }
-
-        Money extra = money_from_major(extra_payment_major);
-        for (int i = 0; i < loan.term_months; i++) {
-            custom_payments[i] = extra;
-        }
-        config.custom_payments = custom_payments;
-    } else {
-        config.custom_payments = NULL;
-    }
+    config.custom_payments = custom_payments;
 
     LoanSchedule schedule = {0};
-    FinanceErrorCode err = run_loan_simulation(&loan, &market, &config, &schedule);
+    const FinanceErrorCode err = run_loan_simulation(&loan, &market, &config, &schedule);
 
     if (err == FINANCE_SUCCESS) {
         print_schedule_to_console(&schedule);
 
         int save_choice = 0;
-        if (read_integer_secure(
-                "\nWould you like to export the schedule to CSV? (1 for Yes, 0 for No): ",
-                &save_choice)) {
+        if (read_integer_secure("\nWould you like to export the schedule to CSV? (1 for Yes, 0 for No): ", &save_choice)) {
             if (save_choice == 1) {
                 char filename[256];
-                if (read_string_secure("Enter destination filename (e.g., report.csv): ",
-                                       filename,
-                                       sizeof(filename))) {
+                if (read_string_secure("Enter destination filename (e.g., report.csv): ", filename, sizeof(filename))) {
                     save_schedule_to_csv(&schedule, filename);
                 }
             }
@@ -95,9 +114,6 @@ static void execute_simulation(const LoanDefinition loan,
 
     free_schedule(&schedule);
     aligned_free(rates);
-    if (custom_payments) {
-        aligned_free(custom_payments);
-    }
 }
 
 static void process_manual_entry(void)
@@ -113,30 +129,50 @@ static void process_manual_entry(void)
     if (!read_integer_secure("Term (in months): ", &term))
         return;
 
-    if (!read_integer_secure("Loan Type (0 = Equal Installments, 1 = Decreasing Installments): ",
-                             &type_input))
+    if (!read_integer_secure("Loan Type (0 = Equal Installments, 1 = Decreasing Installments): ", &type_input))
         return;
 
     if (!read_double_secure("Annual Interest Rate (e.g. 0.05 for 5%%): ", &base_rate))
         return;
 
-    if (!read_integer_secure("Overpayment Strategy (0 = Reduce Term, 1 = Reduce Installment): ",
-                             &strategy_input))
+    if (!read_integer_secure("Overpayment Strategy (0 = Reduce Term, 1 = Reduce Installment): ", &strategy_input))
         return;
 
-    if (!read_double_secure("Fixed Custom Overpayment Per Month (0 if none): ",
-                            &extra_payment_major))
+    if (!read_double_secure("Fixed Custom Overpayment Per Month (0 if none): ", &extra_payment_major))
         return;
 
     LoanDefinition loan;
     loan.principal = money_from_major(principal_major);
     loan.term_months = term;
-    loan.type = (type_input == 0) ? LOAN_EQUAL_INSTALLMENTS : LOAN_DECREASING_INSTALLMENTS;
+    loan.type = type_input == 0 ? LOAN_EQUAL_INSTALLMENTS : LOAN_DECREASING_INSTALLMENTS;
 
-    const OverpaymentStrategy strategy =
-        (strategy_input == 0) ? STRATEGY_REDUCE_TERM : STRATEGY_REDUCE_INSTALLMENT;
+    const OverpaymentStrategy strategy = strategy_input == 0 ? STRATEGY_REDUCE_TERM : STRATEGY_REDUCE_INSTALLMENT;
 
-    execute_simulation(loan, base_rate, strategy, extra_payment_major);
+    Money *custom_payments = aligned_calloc((size_t)term, sizeof(Money), CACHE_LINE_SIZE);
+    if (custom_payments) {
+        if (extra_payment_major > 0.0) {
+            const Money flat_extra = money_from_major(extra_payment_major);
+            for (int i = 0; i < term; i++) {
+                custom_payments[i] = flat_extra;
+            }
+        }
+
+        int load_custom = 0;
+        if (read_integer_secure("\nWould you like to load an irregular overpayment schedule CSV? (1 for Yes, 0 for No): ", &load_custom)) {
+            if (load_custom == 1) {
+                char schedule_path[256];
+                if (read_string_secure("Enter path to the schedule CSV: ", schedule_path, sizeof(schedule_path))) {
+                    apply_custom_payment_schedule(schedule_path, term, custom_payments);
+                }
+            }
+        }
+    }
+
+    execute_simulation(loan, base_rate, strategy, custom_payments);
+
+    if (custom_payments) {
+        aligned_free(custom_payments);
+    }
 }
 
 static void process_csv_entry(void)
@@ -149,7 +185,7 @@ static void process_csv_entry(void)
     }
 
     DataFrame *df = NULL;
-    DataframeErrorCode err = read_csv(filepath, true, ",", &df);
+    const DataframeErrorCode err = read_csv(filepath, true, ",", &df);
 
     if (err != DATAFRAME_SUCCESS || !df) {
         printf("Failed to load or parse the CSV file. Please check the file path and format.\n");
@@ -184,8 +220,7 @@ static void process_csv_entry(void)
     const int strategy_input = (int)strategy_double;
 
     if (principal_major <= 0.0 || term <= 0 || base_rate < 0.0 || extra_payment_major < 0.0) {
-        printf(
-            "Error: CSV contains out-of-bounds mathematical values (e.g., negative principal).\n");
+        printf("Error: CSV contains out-of-bounds mathematical values (e.g., negative principal).\n");
         free_dataframe(df);
         return;
     }
@@ -205,13 +240,37 @@ static void process_csv_entry(void)
     LoanDefinition loan;
     loan.principal = money_from_major(principal_major);
     loan.term_months = term;
-    loan.type = (type_input == 0) ? LOAN_EQUAL_INSTALLMENTS : LOAN_DECREASING_INSTALLMENTS;
+    loan.type = type_input == 0 ? LOAN_EQUAL_INSTALLMENTS : LOAN_DECREASING_INSTALLMENTS;
 
-    OverpaymentStrategy strategy =
-        (strategy_input == 0) ? STRATEGY_REDUCE_TERM : STRATEGY_REDUCE_INSTALLMENT;
+    const OverpaymentStrategy strategy = strategy_input == 0 ? STRATEGY_REDUCE_TERM : STRATEGY_REDUCE_INSTALLMENT;
 
-    printf("\nCSV loaded successfully. Running simulation...\n");
-    execute_simulation(loan, base_rate, strategy, extra_payment_major);
+    printf("\nCSV loaded successfully. Preparing simulation...\n");
+
+    Money *custom_payments = aligned_calloc((size_t)term, sizeof(Money), CACHE_LINE_SIZE);
+    if (custom_payments) {
+        if (extra_payment_major > 0.0) {
+            const Money flat_extra = money_from_major(extra_payment_major);
+            for (int i = 0; i < term; i++) {
+                custom_payments[i] = flat_extra;
+            }
+        }
+
+        int load_custom = 0;
+        if (read_integer_secure("\nWould you like to load an irregular overpayment schedule CSV? (1 for Yes, 0 for No): ", &load_custom)) {
+            if (load_custom == 1) {
+                char schedule_path[256];
+                if (read_string_secure("Enter path to the schedule CSV: ", schedule_path, sizeof(schedule_path))) {
+                    apply_custom_payment_schedule(schedule_path, term, custom_payments);
+                }
+            }
+        }
+    }
+
+    execute_simulation(loan, base_rate, strategy, custom_payments);
+
+    if (custom_payments) {
+        aligned_free(custom_payments);
+    }
 
     free_dataframe(df);
 }

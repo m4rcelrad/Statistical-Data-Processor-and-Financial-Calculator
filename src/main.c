@@ -29,13 +29,25 @@ void generate_mock_files(void)
         printf("Error: Could not create mock_loan_decreasing.csv\n");
     }
 
+    FILE *file_schedule = fopen("mock_schedule.csv", "w");
+    if (file_schedule) {
+        fprintf(file_schedule, "Month,Amount\n");
+        fprintf(file_schedule, "12,5000.00\n");
+        fprintf(file_schedule, "24,5000.00\n");
+        fprintf(file_schedule, "36,10000.00\n");
+        fclose(file_schedule);
+        printf("Successfully generated: mock_schedule.csv\n");
+    } else {
+        printf("Error: Could not create mock_schedule.csv\n");
+    }
+
     printf("-----------------------------\n\n");
 }
 
 int main(void)
 {
     int menu_choice;
-  generate_mock_files();
+    generate_mock_files();
 
     do {
         printf("============================================\n");
