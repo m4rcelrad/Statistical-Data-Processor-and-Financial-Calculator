@@ -1,124 +1,100 @@
-#include <math.h>
-#include <stddef.h>
 #include <stdio.h>
-#include <string.h>
 
-#include "csv_reader.h"
-#include "dataframe.h"
-#include "memory_utils.h"
-#include "statistics.h"
-#include "typedefs.h"
+#include "input_utils.h"
+#include "loan_calculator_ui.h"
 
-static ssize_t find_column_index(const DataFrame *df, const char *col_name)
+/**
+ * @file main.c
+ * @brief Central entry point for the Statistical Data Processor and Financial Calculator.
+ *
+ * This application provides an interactive menu allowing the user to select
+ * between time series analysis and complex financial calculations.
+ */
+
+/**
+ * @brief Generates mock CSV files containing sample data for demonstration purposes.
+ * * Automatically creates dummy configuration files on disk to help the user test
+ * the CSV import features of the application.
+ */
+void generate_mock_files(void)
 {
-    if (!df || !col_name)
-        return -1;
-    for (size_t i = 0; i < (size_t)df->cols; i++) {
-        if (df->columns[i] && strcmp(df->columns[i], col_name) == 0) {
-            return (ssize_t)i;
-        }
+    printf("\n--- GENERATING MOCK FILES ---\n");
+
+    FILE *file_equal = fopen("mock_loan_equal.csv", "w");
+    if (file_equal) {
+        fprintf(file_equal,
+                "PrincipalAmount,TermMonths,LoanType,AnnualRate,OverpaymentPlan,MonthlyExtra\n");
+        fprintf(file_equal, "250000.00,120,0,0.05,0,500.00\n");
+        fclose(file_equal);
+        printf("Successfully generated: mock_loan_equal.csv\n");
+    } else {
+        printf("Error: Could not create mock_loan_equal.csv\n");
     }
-    return -1;
+
+    FILE *file_decreasing = fopen("mock_loan_decreasing.csv", "w");
+    if (file_decreasing) {
+        fprintf(file_decreasing,
+                "PrincipalAmount,TermMonths,LoanType,AnnualRate,OverpaymentPlan,MonthlyExtra\n");
+        fprintf(file_decreasing, "500000.00,60,1,0.07,1,0.00\n");
+        fclose(file_decreasing);
+        printf("Successfully generated: mock_loan_decreasing.csv\n");
+    } else {
+        printf("Error: Could not create mock_loan_decreasing.csv\n");
+    }
+
+    FILE *file_schedule = fopen("mock_schedule.csv", "w");
+    if (file_schedule) {
+        fprintf(file_schedule, "Month,Amount\n");
+        fprintf(file_schedule, "12,5000.00\n");
+        fprintf(file_schedule, "24,5000.00\n");
+        fprintf(file_schedule, "36,10000.00\n");
+        fclose(file_schedule);
+        printf("Successfully generated: mock_schedule.csv\n");
+    } else {
+        printf("Error: Could not create mock_schedule.csv\n");
+    }
+
+    printf("-----------------------------\n\n");
 }
 
+/**
+ * @brief The main execution block and primary application menu.
+ * * Displays the main menu, parses the user's choices safely, and acts as a router
+ * switching contexts between different functional sub-systems.
+ * * @return 0 upon successful execution and normal application termination.
+ */
 int main(void)
 {
-    const char *filepath = "market_data.csv";
+    int menu_choice;
+    generate_mock_files();
 
-    FILE *file = fopen(filepath, "w");
-    if (file) {
-        fprintf(file, "Date,ClosePrice\n");
-        fprintf(file, "2023-10-01,150.0\n");
-        fprintf(file, "2023-10-02,152.0\n");
-        fprintf(file, "2023-10-03,151.5\n");
-        fprintf(file, "2023-10-04,155.0\n");
-        fprintf(file, "2023-10-05,153.0\n");
-        fprintf(file, "2023-10-06,157.0\n");
-        fprintf(file, "2023-10-07,156.5\n");
-        fprintf(file, "2023-10-08,159.0\n");
-        fclose(file);
-    }
+    do {
+        printf("============================================\n");
+        printf("1. Time Series Analyzer\n");
+        printf("2. Financial Calculator\n");
+        printf("0. Exit\n");
+        printf("============================================\n");
 
-    DataFrame *df = NULL;
-    const DataframeErrorCode status = read_csv(filepath, true, ",", &df);
+        const bool valid_input = read_integer_secure("Select an option [0-2]: ", &menu_choice);
 
-    if (status != DATAFRAME_SUCCESS || !df) {
-        printf("Error: Failed to load DataFrame. Code: %d\n", status);
-        return 1;
-    }
+        if (!valid_input)
+            menu_choice = -1;
 
-    const ssize_t price_col_idx = find_column_index(df, "ClosePrice");
-    if (price_col_idx == -1 || df->col_types[price_col_idx] != TYPE_NUMERIC) {
-        printf("Error: 'ClosePrice' numeric column not found in dataset!\n");
-        free_dataframe(df);
-        return 1;
-    }
-
-    const size_t row_count = (size_t)df->rows;
-    double *close_prices = (double *)aligned_calloc(row_count, sizeof(double), CACHE_LINE_SIZE);
-    if (!close_prices) {
-        printf("Error: Aligned memory allocation failed for prices.\n");
-        free_dataframe(df);
-        return 1;
-    }
-
-    for (size_t i = 0; i < row_count; i++) {
-        close_prices[i] = df->data[i][price_col_idx].v_num;
-    }
-
-    double mean_val = 0.0;
-    double std_dev_val = 0.0;
-
-    StatisticsErrorCode stats_error_code = calculate_mean(close_prices, row_count, &mean_val);
-    if (stats_error_code != STATS_SUCCESS) {
-        printf("Error calculating mean: %d\n", stats_error_code);
-    }
-
-    stats_error_code = calculate_standard_deviation(close_prices, row_count, &std_dev_val);
-    if (stats_error_code != STATS_SUCCESS) {
-        printf("Error calculating standard deviation: %d\n", stats_error_code);
-    }
-
-    double *sma_values = (double *)aligned_calloc(row_count, sizeof(double), CACHE_LINE_SIZE);
-    const char **signals =
-        (const char **)aligned_calloc(row_count, sizeof(char *), CACHE_LINE_SIZE);
-
-    if (sma_values && signals) {
-        const int sma_period = 3;
-
-        if (calculate_sma(close_prices, row_count, sma_period, sma_values) == STATS_SUCCESS &&
-            generate_trading_signals(close_prices, sma_values, row_count, signals) ==
-                STATS_SUCCESS) {
-            printf("=== TIME SERIES ANALYSIS REPORT ===\n");
-            printf("Distribution Parameters: N(m=%.2f, sigma=%.2f)\n", mean_val, std_dev_val);
-            printf("----------------------------------------------------\n");
-            printf("%-12s | %-10s | %-10s | %-10s\n", "Date", "Price", "SMA(3)", "Signal");
-            printf("----------------------------------------------------\n");
-
-            for (size_t i = 0; i < row_count; i++) {
-                const char *date_str =
-                    (df->col_types[0] == TYPE_STRING) ? df->data[i][0].v_str : "N/A";
-
-                printf("%-12s | %-10.2f | ", date_str, close_prices[i]);
-                if (isnan(sma_values[i])) {
-                    printf("%-10s | ", "NaN");
-                } else {
-                    printf("%-10.2f | ", sma_values[i]);
-                }
-                printf("%-10s\n", signals[i]);
-            }
-        } else {
-            printf("Error: Statistics computation failed.\n");
+        switch (menu_choice) {
+        case 1:
+            printf("Running Time Series Analyzer...\n");
+            break;
+        case 2:
+            printf("Running Financial Calculator...\n");
+            loan_calculator_menu();
+            break;
+        case 0:
+            printf("Exiting application. Goodbye!\n");
+            break;
+        default:
+            printf("Error: Invalid option. Please enter 0, 1, or 2.\n");
         }
-    }
-
-    if (signals)
-        aligned_free((void *)signals);
-    if (sma_values)
-        aligned_free(sma_values);
-    if (close_prices)
-        aligned_free(close_prices);
-    free_dataframe(df);
+    } while (menu_choice != 0);
 
     return 0;
 }
