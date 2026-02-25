@@ -18,6 +18,8 @@ set(CORE_SOURCES
         src/csv_reader.c
         src/statistics.c
         src/memory_utils.c
+        src/loan_calculator_ui.c
+        src/input_utils.c
         include/typedefs.h
 )
 
