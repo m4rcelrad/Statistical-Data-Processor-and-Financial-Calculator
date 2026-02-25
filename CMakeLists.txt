@@ -20,6 +20,8 @@ set(CORE_SOURCES
         src/memory_utils.c
         src/loan_calculator_ui.c
         src/input_utils.c
+        src/time_series_ui.c
+        src/loan_calculator_ui.c
         include/typedefs.h
 )
 

@@ -328,7 +328,7 @@ void loan_calculator_menu(void)
         printf("\n--- FINANCIAL CALCULATOR ---\n");
         printf("1. Enter loan parameters manually\n");
         printf("2. Load loan parameters from CSV file\n");
-        printf("0. Exit application\n");
+        printf("0. Return to Main Menu\n");
         printf("--------------------------------------------\n");
 
         const bool valid_input = read_integer_secure("Select an option [0-2]: ", &menu_choice);
@@ -344,7 +344,7 @@ void loan_calculator_menu(void)
             process_csv_entry();
             break;
         case 0:
-            printf("Exiting application.\n");
+            printf("Returning to main menu...\n");
             break;
         default:
             printf("Invalid selection. Please try again.\n");
