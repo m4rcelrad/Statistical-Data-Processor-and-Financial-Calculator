@@ -58,10 +58,12 @@ static FinanceErrorCode validate_config(const SimulationConfig *config)
 
 /**
  * @brief Determines the actual payment amount for the current month.
- * * Takes into account custom overpayments or the selected strategy (reducing term
- * vs. reducing installments) to decide the final amount to be paid.
+ * * Calculates the required payment based on the selected strategy (reducing term
+ * vs. reducing installments), adds any custom extra overpayments for the current
+ * month, and ensures the total payment does not exceed the remaining balance
+ * plus accrued interest.
  *
- * @param config Pointer to the simulation config.
+ * @param config Pointer to the simulation config containing overpayment details.
  * @param state Pointer to the active simulation state.
  * @param required_payment The calculated baseline payment.
  * @param interest Accrued interest for the month.
@@ -74,32 +76,38 @@ static FinanceErrorCode determine_actual_payment(const SimulationConfig *config,
                                                  const Money interest,
                                                  Money *out_final_payment)
 {
-    const Money custom_amount =
+    const Money custom_extra =
         config->custom_payments ? config->custom_payments[state->current_month] : MONEY_ZERO;
 
-    if (money_is_positive(custom_amount)) {
-        const Money max_allowed = money_add(state->current_balance, interest);
-        if (money_gt(custom_amount, max_allowed))
-            return FINANCE_ERR_PAYMENT_TOO_LARGE;
-        if (money_lt(custom_amount, interest))
-            return FINANCE_ERR_NEGATIVE_AMORTIZATION;
-        *out_final_payment = custom_amount;
-    } else {
-        Money payment;
-        if (config->strategy == STRATEGY_REDUCE_INSTALLMENT) {
-            payment = required_payment;
-        } else {
-            const Money target =
-                state->current_month == 0 ? required_payment : state->last_total_payment;
-            payment = money_gt(required_payment, target) ? required_payment : target;
-        }
+    Money payment;
 
-        if (money_lte(payment, interest)) {
-            const Money one_unit = {1};
-            payment = money_add(interest, one_unit);
-        }
-        *out_final_payment = payment;
+    if (config->strategy == STRATEGY_REDUCE_INSTALLMENT) {
+        payment = required_payment;
+    } else {
+        const Money target =
+            state->current_month == 0 ? required_payment : state->last_total_payment;
+        payment = money_gt(required_payment, target) ? required_payment : target;
     }
+
+    if (money_lte(payment, interest)) {
+        const Money one_unit = {1};
+        payment = money_add(interest, one_unit);
+    }
+
+    if (money_is_positive(custom_extra)) {
+        payment = money_add(payment, custom_extra);
+    }
+
+    const Money max_allowed = money_add(state->current_balance, interest);
+
+    if (money_gt(payment, max_allowed)) {
+        payment = max_allowed;
+    }
+
+    if (money_lt(payment, interest))
+        return FINANCE_ERR_NEGATIVE_AMORTIZATION;
+
+    *out_final_payment = payment;
     return FINANCE_SUCCESS;
 }
 
