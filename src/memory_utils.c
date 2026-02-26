@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #include <malloc.h>
 #endif
 
@@ -42,7 +42,7 @@ void *aligned_calloc(const size_t num, const size_t size, size_t alignment)
     void *ptr = NULL;
 
     /* Platform-specific aligned allocation */
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     ptr = _aligned_malloc(total_size, alignment);
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
     /* C11 aligned allocation */
@@ -68,7 +68,7 @@ void aligned_free(void *ptr)
         return;
 
     /* Platform-specific aligned deallocation */
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     _aligned_free(ptr);
 #else
     /* For C11 and POSIX, standard free() successfully handles aligned memory */
