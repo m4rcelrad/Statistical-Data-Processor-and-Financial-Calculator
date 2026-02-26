@@ -10,7 +10,7 @@
  *
  * This file verifies the correctness of mathematical and statistical algorithms,
  * including parameters of the normal distribution N(m, 𝜎) (mean and standard deviation),
- * moving averages, and trading signals generation.
+ * moving averages, Bollinger Bands, covariance, correlation, and trading signals generation.
  */
 
 /**
@@ -164,6 +164,100 @@ void test_CalculateEMA_Negative(void)
 }
 
 /**
+ * @brief Tests the rolling standard deviation calculation over a sliding window.
+ */
+void test_CalculateRollingStd(void)
+{
+    double data[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    double rolling_std[5];
+    size_t length = sizeof(data) / sizeof(data[0]);
+
+    StatisticsErrorCode err = calculate_rolling_std(data, length, 3, rolling_std);
+
+    TEST_ASSERT_EQUAL_INT(STATS_SUCCESS, err);
+    TEST_ASSERT_TRUE(isnan(rolling_std[0]));
+    TEST_ASSERT_TRUE(isnan(rolling_std[1]));
+
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 1.0, rolling_std[2]);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 1.0, rolling_std[3]);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 1.0, rolling_std[4]);
+}
+
+/**
+ * @brief Tests the Bollinger Bands calculation based on N(m, 𝜎) distribution boundaries.
+ */
+void test_CalculateBollingerBands(void)
+{
+    double sma[] = {10.0, 20.0, 30.0};
+    double std_dev[] = {1.0, 2.0, 3.0};
+    double upper[3], lower[3];
+    size_t length = 3;
+
+    StatisticsErrorCode err = calculate_bollinger_bands(sma, std_dev, length, 2.0, upper, lower);
+
+    TEST_ASSERT_EQUAL_INT(STATS_SUCCESS, err);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 12.0, upper[0]);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 8.0, lower[0]);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 24.0, upper[1]);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 16.0, lower[1]);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 36.0, upper[2]);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 24.0, lower[2]);
+}
+
+/**
+ * @brief Tests the sample covariance calculation between two series.
+ */
+void test_CalculateCovariance(void)
+{
+    double data_x[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    double data_y[] = {2.0, 4.0, 6.0, 8.0, 10.0};
+    double covariance;
+    size_t length = sizeof(data_x) / sizeof(data_x[0]);
+
+    StatisticsErrorCode err = calculate_covariance(data_x, data_y, length, &covariance);
+
+    TEST_ASSERT_EQUAL_INT(STATS_SUCCESS, err);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 5.0, covariance);
+}
+
+/**
+ * @brief Tests the Pearson correlation calculation ensuring limits of -1.0 to 1.0.
+ */
+void test_CalculateCorrelation(void)
+{
+    double data_x[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    double data_y_pos[] = {2.0, 4.0, 6.0, 8.0, 10.0};
+    double data_y_neg[] = {5.0, 4.0, 3.0, 2.0, 1.0};
+    double correlation;
+    size_t length = sizeof(data_x) / sizeof(data_x[0]);
+
+    StatisticsErrorCode err1 = calculate_correlation(data_x, data_y_pos, length, &correlation);
+    TEST_ASSERT_EQUAL_INT(STATS_SUCCESS, err1);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, 1.0, correlation);
+
+    StatisticsErrorCode err2 = calculate_correlation(data_x, data_y_neg, length, &correlation);
+    TEST_ASSERT_EQUAL_INT(STATS_SUCCESS, err2);
+    TEST_ASSERT_DOUBLE_WITHIN(0.001, -1.0, correlation);
+}
+
+/**
+ * @brief Tests the correlation calculation when one series has zero variance.
+ * Expected result: The mathematical domain error is caught, returning NaN.
+ */
+void test_CalculateCorrelation_ZeroVariance(void)
+{
+    double data_x[] = {5.0, 5.0, 5.0, 5.0, 5.0};
+    double data_y[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    double correlation;
+    size_t length = sizeof(data_x) / sizeof(data_x[0]);
+
+    StatisticsErrorCode err = calculate_correlation(data_x, data_y, length, &correlation);
+
+    TEST_ASSERT_EQUAL_INT(STATS_SUCCESS, err);
+    TEST_ASSERT_TRUE(isnan(correlation));
+}
+
+/**
  * @brief Test runner function that registers and executes all statistical module tests.
  */
 void run_statistics_tests(void)
@@ -172,9 +266,16 @@ void run_statistics_tests(void)
     RUN_TEST(test_CalculateSeriesStatistics_WithNaN);
     RUN_TEST(test_CalculateSeriesStatistics_NullOrEmpty);
     RUN_TEST(test_CalculateSeriesStatistics_SinglePoint);
+
     RUN_TEST(test_CalculateSMA);
-    RUN_TEST(test_CalculateEMA);
-    RUN_TEST(test_GenerateTradingSignals);
     RUN_TEST(test_CalculateSMA_Negative);
+    RUN_TEST(test_CalculateEMA);
     RUN_TEST(test_CalculateEMA_Negative);
+    RUN_TEST(test_GenerateTradingSignals);
+
+    RUN_TEST(test_CalculateRollingStd);
+    RUN_TEST(test_CalculateBollingerBands);
+    RUN_TEST(test_CalculateCovariance);
+    RUN_TEST(test_CalculateCorrelation);
+    RUN_TEST(test_CalculateCorrelation_ZeroVariance);
 }
