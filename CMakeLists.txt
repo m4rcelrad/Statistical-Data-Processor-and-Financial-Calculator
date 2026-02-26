@@ -18,7 +18,6 @@ set(CORE_SOURCES
         src/csv_reader.c
         src/statistics.c
         src/memory_utils.c
-        src/loan_calculator_ui.c
         src/input_utils.c
         src/time_series_ui.c
         src/loan_calculator_ui.c
@@ -40,7 +39,7 @@ target_link_libraries(StatisticalDataProcessor PRIVATE CoreLib)
 enable_testing()
 set(UNITY_DIR tests/unity)
 
-add_executable(run_tests
+add_executable(test_runner
         tests/main_tests.c
         tests/tests_money.c
         tests/tests_loan_math.c
@@ -52,6 +51,8 @@ add_executable(run_tests
         ${UNITY_DIR}/unity.c
 )
 
-target_include_directories(run_tests PRIVATE ${UNITY_DIR})
-target_compile_definitions(run_tests PRIVATE UNITY_INCLUDE_DOUBLE)
-target_link_libraries(run_tests PRIVATE CoreLib)
+target_include_directories(test_runner PRIVATE ${UNITY_DIR})
+target_compile_definitions(test_runner PRIVATE UNITY_INCLUDE_DOUBLE)
+target_link_libraries(test_runner PRIVATE CoreLib)
+
+add_test(NAME UnityTestSuite COMMAND test_runner)
